@@ -1,0 +1,392 @@
+/* ============================================================
+   RESET Y VARIABLES GLOBALES
+   ============================================================ */
+
+* {
+  /* El selector * aplica a TODOS los elementos */
+  box-sizing: border-box;
+  /* Por defecto, el padding y border se SUMAN al ancho/alto.
+     Con border-box, el padding y border se INCLUYEN en el ancho/alto.
+     Ejemplo: div de 100px con padding 10px
+     - Sin border-box: total = 120px (100 + 10 + 10)
+     - Con border-box: total = 100px (el padding va adentro) */
+  margin: 0;
+  padding: 0;
+  /* Quitamos márgenes y paddings por defecto del navegador */
+}
+
+:root {
+  /* :root es el elemento raíz (html). Las variables CSS van acá.
+     Se acceden con var(--nombre-variable) en cualquier parte del CSS. */
+  --bg: #0f0f1a;
+  --surface: #1a1a2e;
+  --surface2: #16213e;
+  --border: #2a2a4a;
+  --text: #e8e8f0;
+  --text-dim: #8888aa;
+  --player1: #4A90D9;
+  --player2: #E85D75;
+  --diagonal: rgba(255, 200, 50, 0.08);
+  /* Color sutil para resaltar las diagonales */
+  --cell-size: 38px;
+  /* Tamaño de cada celda */
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  min-height: 100vh;
+  /* 100vh = 100% del viewport height — ocupa toda la pantalla */
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  /* flex layout: centrado horizontal, pegado arriba */
+  padding: 20px;
+}
+
+/* ============================================================
+   LOBBY (PANTALLA DE INICIO)
+   ============================================================ */
+
+.lobby-container {
+  width: 100%;
+  max-width: 400px;
+  /* Máximo 400px — en pantallas grandes no se extiende demasiado */
+  text-align: center;
+  padding-top: 40px;
+}
+
+.title {
+  font-size: 3rem;
+  /* rem = relativo al tamaño base del navegador (generalmente 16px)
+     3rem = 48px */
+  font-weight: 800;
+  letter-spacing: -2px;
+  background: linear-gradient(135deg, var(--player1), var(--player2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  /* Este truco aplica el gradiente al texto en sí */
+}
+
+.subtitle {
+  color: var(--text-dim);
+  margin: 8px 0 32px;
+  font-size: 0.95rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+}
+
+.option-section {
+  margin-bottom: 20px;
+}
+
+.option-section h2 {
+  font-size: 1.1rem;
+  margin-bottom: 6px;
+}
+
+.option-section p {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+}
+
+.btn {
+  padding: 12px 28px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  /* cursor: pointer → muestra la manito al pasar por encima */
+  transition: transform 0.1s, opacity 0.1s;
+  /* transition → anima los cambios suavemente */
+  width: 100%;
+}
+
+.btn:active {
+  /* :active = cuando el botón está siendo apretado */
+  transform: scale(0.97);
+  /* Efecto de "presionado" */
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--player1), #2a6db5);
+  color: white;
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, var(--player2), #b5304a);
+  color: white;
+}
+
+.input-group {
+  display: flex;
+  gap: 8px;
+  /* gap: espacio entre elementos en flex */
+}
+
+.code-input {
+  flex: 1;
+  /* flex: 1 → ocupa todo el espacio disponible */
+  padding: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 1.1rem;
+  text-align: center;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+
+.code-input:focus {
+  outline: none;
+  border-color: var(--player1);
+  /* Al enfocar, el borde se vuelve azul */
+}
+
+.divider {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin: 16px 0;
+}
+
+.error {
+  background: rgba(232, 93, 117, 0.15);
+  border: 1px solid var(--player2);
+  color: var(--player2);
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  margin-top: 12px;
+}
+
+.hidden {
+  display: none !important;
+  /* Oculta el elemento completamente.
+     JavaScript remueve esta clase para mostrarlo. */
+}
+
+/* ============================================================
+   PANTALLA DE JUEGO
+   ============================================================ */
+
+.game-container {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.game-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.room-info {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+}
+
+.room-info strong {
+  color: var(--text);
+  letter-spacing: 2px;
+}
+
+.players-legend {
+  display: flex;
+  gap: 12px;
+}
+
+.player-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  /* border-radius: 50% → círculo perfecto */
+}
+
+.status-message {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* ============================================================
+   EL TABLERO DE SUDOKU
+   ============================================================ */
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(9, var(--cell-size));
+  grid-template-rows: repeat(9, var(--cell-size));
+  /* CSS Grid: creamos una grilla de 9 columnas y 9 filas,
+     cada una del tamaño definido en --cell-size */
+  border: 3px solid var(--text);
+  /* Borde exterior grueso */
+  border-radius: 4px;
+}
+
+.cell {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Centra el número dentro de la celda */
+  font-size: 1.1rem;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s;
+  color: var(--text-dim);
+}
+
+.cell.fixed {
+  /* Celdas que no se pueden modificar */
+  color: var(--text);
+  font-weight: 700;
+  cursor: default;
+}
+
+.cell.diagonal {
+  /* Celdas que pertenecen a alguna diagonal */
+  background: var(--diagonal);
+}
+
+.cell.selected {
+  background: rgba(74, 144, 217, 0.2);
+  outline: 2px solid var(--player1);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+.cell.error {
+  color: #ff6b6b;
+  /* Número incorrecto → rojo */
+}
+
+.cell.correct {
+  animation: pop 0.2s ease;
+}
+
+@keyframes pop {
+  /* Animación de "pop" cuando se pone un número correcto */
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+/* Bordes gruesos cada 3 celdas para separar las cajas 3x3 */
+/* Las columnas 3 y 6 tienen borde izquierdo grueso */
+.cell[data-col="3"],
+.cell[data-col="6"] {
+  border-left: 2px solid var(--text-dim);
+}
+
+/* Las filas 3 y 6 tienen borde superior grueso */
+.cell[data-row="3"],
+.cell[data-row="6"] {
+  border-top: 2px solid var(--text-dim);
+}
+
+/* ============================================================
+   TECLADO NUMÉRICO
+   ============================================================ */
+
+.numpad {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  /* repeat(5, 1fr): 5 columnas de igual tamaño */
+  gap: 8px;
+  width: 100%;
+  max-width: 340px;
+}
+
+.num-btn {
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.1s, transform 0.1s;
+}
+
+.num-btn:active {
+  background: var(--surface2);
+  transform: scale(0.95);
+}
+
+.delete-btn {
+  color: var(--player2);
+  border-color: var(--player2);
+}
+
+/* ============================================================
+   PANTALLA DE VICTORIA
+   ============================================================ */
+
+.win-screen {
+  position: fixed;
+  /* fixed: se queda fijo en la pantalla, encima de todo */
+  inset: 0;
+  /* inset: 0 equivale a top:0, right:0, bottom:0, left:0 */
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.win-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px;
+  text-align: center;
+  max-width: 300px;
+}
+
+.win-card h2 {
+  font-size: 1.5rem;
+  margin-bottom: 12px;
+}
+
+.win-card p {
+  color: var(--text-dim);
+  margin-bottom: 24px;
+}
+
+.win-card button {
+  padding: 12px 28px;
+  background: linear-gradient(135deg, var(--player1), var(--player2));
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}

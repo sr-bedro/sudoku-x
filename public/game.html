@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sudoku X — Jugando</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="game-container">
+
+    <div class="game-header">
+      <div class="room-info">
+        <span>Sala: </span>
+        <strong id="display-code">----</strong>
+        <!-- El código de la sala se inserta acá desde JavaScript -->
+      </div>
+
+      <div class="players-legend">
+        <!-- Leyenda de colores de cada jugador -->
+        <div class="player-indicator" id="player1-indicator">
+          <div class="color-dot" style="background: #4A90D9"></div>
+          <span>Jugador 1</span>
+        </div>
+        <div class="player-indicator" id="player2-indicator">
+          <div class="color-dot" style="background: #E85D75"></div>
+          <span>Jugador 2</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="status-message" class="status-message">
+      Esperando al segundo jugador...
+    </div>
+
+    <div id="board" class="board">
+      <!-- El tablero 9x9 se genera dinámicamente con JavaScript.
+           No lo escribimos a mano porque son 81 celdas. -->
+    </div>
+
+    <div class="numpad">
+      <!-- Teclado numérico táctil para celulares -->
+      <button class="num-btn" data-num="1">1</button>
+      <button class="num-btn" data-num="2">2</button>
+      <button class="num-btn" data-num="3">3</button>
+      <button class="num-btn" data-num="4">4</button>
+      <button class="num-btn" data-num="5">5</button>
+      <button class="num-btn" data-num="6">6</button>
+      <button class="num-btn" data-num="7">7</button>
+      <button class="num-btn" data-num="8">8</button>
+      <button class="num-btn" data-num="9">9</button>
+      <button class="num-btn delete-btn" data-num="0">✕</button>
+      <!-- data-num="0" significa "borrar" — ponemos 0 en la celda -->
+    </div>
+
+    <div id="win-screen" class="win-screen hidden">
+      <div class="win-card">
+        <h2>🎉 ¡Completaron el puzzle!</h2>
+        <p id="win-message"></p>
+        <button onclick="sessionStorage.clear(); window.location.href='/'">Jugar de nuevo</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="client.js"></script>
+</body>
+</html>

@@ -1,214 +1,279 @@
 // ============================================================
-// RECUPERAR DATOS DE LA SESIÓN
+// SESIÓN
 // ============================================================
 
-const roomCode = sessionStorage.getItem('roomCode');
+const roomCode    = sessionStorage.getItem('roomCode');
 const playerIndex = parseInt(sessionStorage.getItem('playerIndex'));
-// parseInt convierte el string "0" o "1" al número 0 o 1.
-let board = JSON.parse(sessionStorage.getItem('board'));
-// JSON.parse convierte el texto JSON de vuelta a objeto JavaScript.
-// "let" porque el tablero va a cambiar durante el juego.
+let   board       = JSON.parse(sessionStorage.getItem('board'));
 
-if (!roomCode) {
-  window.location.href = '/';
-  // Si no hay código de sala (alguien entró directamente a /game.html),
-  // lo mandamos al inicio.
-}
+if (!roomCode) window.location.href = '/';
 
 // ============================================================
-// CONFIGURACIÓN DEL JUGADOR
+// ESTADO
 // ============================================================
 
-const myColor = playerIndex === 0 ? '#4A90D9' : '#E85D75';
-// Operador ternario: condición ? valor_si_true : valor_si_false
-// Jugador 0 → azul, Jugador 1 → rosado
-
-let selectedCell = null;
-// La celda actualmente seleccionada (donde se va a escribir el número)
+let selectedRow = -1;
+let selectedCol = -1;
+let noteMode    = false;
+let gameStarted = false;
+const undoStack = [];
 
 // ============================================================
-// CONECTAR SOCKET Y RECONECTAR A LA SALA
+// SOCKET
 // ============================================================
 
 const socket = io();
-
-// Flag para saber si el juego ya arrancó. Evita mostrar win screen prematuramente.
-let gameStarted = false;
-
 socket.on('connect', () => {
-  // Enviamos código Y playerIndex para que el servidor sepa quién somos.
   socket.emit('rejoin-room', { code: roomCode, playerIndex });
 });
 
 // ============================================================
-// REFERENCIAS AL DOM
+// DOM
 // ============================================================
 
-const boardEl = document.getElementById('board');
-const displayCode = document.getElementById('display-code');
+const boardEl       = document.getElementById('board');
+const displayCode   = document.getElementById('display-code');
 const statusMessage = document.getElementById('status-message');
-const winScreen = document.getElementById('win-screen');
-const winMessage = document.getElementById('win-message');
-const numBtns = document.querySelectorAll('.num-btn');
-// querySelectorAll devuelve TODOS los elementos con esa clase.
-// Devuelve un NodeList (similar a un array).
+const winScreen     = document.getElementById('win-screen');
+const winMessage    = document.getElementById('win-message');
+const numBtns       = document.querySelectorAll('.num-btn');
+const btnNote       = document.getElementById('btn-note');
+const btnErase      = document.getElementById('btn-erase');
+const btnUndo       = document.getElementById('btn-undo');
 
 displayCode.textContent = roomCode;
-// Mostramos el código de sala en el header.
 
 // ============================================================
-// GENERAR EL TABLERO EN EL DOM
+// LÁPIZ — toggle
 // ============================================================
 
-function renderBoard() {
-  boardEl.innerHTML = '';
-  // Limpiamos el tablero antes de volver a dibujarlo.
-  // innerHTML = '' elimina todo el contenido HTML del elemento.
-
-  for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) {
-      const cell = board[r][c];
-      // Obtenemos la info de esta celda del array board.
-
-      const el = document.createElement('div');
-      // Creamos un nuevo elemento div en JavaScript.
-
-      el.className = 'cell';
-      // Le asignamos la clase 'cell' para los estilos base.
-
-      el.dataset.row = r;
-      el.dataset.col = c;
-      // dataset permite guardar datos personalizados en el elemento.
-      // Quedan como atributos data-row y data-col en el HTML.
-      // Los usamos en el CSS (.cell[data-row="3"]) y en eventos.
-
-      // ---- Clase: celda diagonal ----
-      const isMainDiag = r === c;
-      const isAntiDiag = r + c === 8;
-      if (isMainDiag || isAntiDiag) {
-        el.classList.add('diagonal');
-        // classList.add() agrega una clase sin quitar las existentes.
-      }
-
-      // ---- Clase: celda fija ----
-      if (cell.fixed) {
-        el.classList.add('fixed');
-      }
-
-      // ---- Contenido: el número ----
-      if (cell.value !== 0) {
-        el.textContent = cell.value;
-
-        if (!cell.fixed && cell.player) {
-          // Si tiene color de jugador, lo aplicamos.
-          el.style.color = cell.player;
-          // .style.color permite cambiar estilos inline desde JavaScript.
-        }
-      }
-
-      // ---- Evento: click en la celda ----
-      el.addEventListener('click', () => onCellClick(r, c, el));
-
-      boardEl.appendChild(el);
-      // appendChild agrega el elemento div al tablero.
-    }
-  }
-}
+btnNote.addEventListener('click', () => {
+  noteMode = !noteMode;
+  btnNote.classList.toggle('active', noteMode);
+  numBtns.forEach(btn => btn.classList.toggle('note-mode', noteMode));
+});
 
 // ============================================================
-// MANEJAR CLICK EN CELDA
+// BORRAR
 // ============================================================
 
-function onCellClick(row, col, el) {
-  if (board[row][col].fixed) return;
-  // No seleccionamos celdas fijas.
-
-  if (selectedCell) {
-    selectedCell.classList.remove('selected');
-    // Quitamos el resaltado de la celda anteriormente seleccionada.
-  }
-
-  selectedCell = el;
-  el.classList.add('selected');
-  // Resaltamos la nueva celda seleccionada.
-}
+btnErase.addEventListener('click', () => {
+  if (selectedRow === -1) return;
+  if (board[selectedRow][selectedCol].fixed) return;
+  socket.emit('make-move', { row: selectedRow, col: selectedCol, value: 0 });
+});
 
 // ============================================================
-// MANEJAR CLICK EN LOS NÚMEROS DEL NUMPAD
+// DESHACER
 // ============================================================
 
-numBtns.forEach(btn => {
-  // forEach itera sobre cada elemento del NodeList.
-
-  btn.addEventListener('click', () => {
-    if (!selectedCell) return;
-    // Si no hay celda seleccionada, no hacemos nada.
-
-    const row = parseInt(selectedCell.dataset.row);
-    const col = parseInt(selectedCell.dataset.col);
-    const value = parseInt(btn.dataset.num);
-    // Obtenemos fila, columna y número desde los data attributes.
-
-    socket.emit('make-move', { row, col, value });
-    // Enviamos el movimiento al servidor.
-    // El servidor lo valida, actualiza el estado y se lo manda a todos.
+btnUndo.addEventListener('click', () => {
+  if (undoStack.length === 0) return;
+  const last = undoStack[undoStack.length - 1];
+  socket.emit('undo-move', {
+    row: last.row, col: last.col,
+    prevValue: last.prevValue, prevNotes: last.prevNotes, prevPlayer: last.prevPlayer,
   });
 });
 
 // ============================================================
-// RECIBIR ACTUALIZACIONES DEL TABLERO
+// NUMPAD
 // ============================================================
 
-socket.on('board-update', ({ row, col, value, playerColor, correct }) => {
-  // Alguien hizo un movimiento (puede ser yo o Cris).
-  // El servidor nos manda la actualización.
-
-  board[row][col].value = value;
-  board[row][col].player = value === 0 ? null : playerColor;
-  // Actualizamos nuestro array board local.
-
-  const el = getCellElement(row, col);
-  // Buscamos el elemento DOM de esta celda.
-
-  el.textContent = value !== 0 ? value : '';
-  // Mostramos el número o lo borramos.
-
-  el.classList.remove('error', 'correct');
-  // Quitamos clases de error/correcto anteriores.
-
-  if (value !== 0) {
-    el.style.color = correct ? playerColor : '#ff6b6b';
-    // Si es correcto: color del jugador. Si es error: rojo.
-
-    el.classList.add(correct ? 'correct' : 'error');
-    // Agregamos la clase correspondiente (para animaciones y estilos).
-  } else {
-    el.style.color = '';
-    // Resetear el color si se borró el número.
-  }
+numBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (selectedRow === -1) return;
+    const value = parseInt(btn.dataset.num);
+    if (noteMode) {
+      socket.emit('make-note', { row: selectedRow, col: selectedCol, num: value });
+    } else {
+      socket.emit('make-move', { row: selectedRow, col: selectedCol, value });
+    }
+  });
 });
 
-function getCellElement(row, col) {
-  return boardEl.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-  // querySelector busca el primer elemento que coincida con el selector CSS.
-  // Buscamos la celda por sus data attributes de fila y columna.
-  // Las backticks permiten insertar variables en el string.
+// ============================================================
+// RENDERIZAR TABLERO
+// ============================================================
+
+function renderBoard() {
+  boardEl.innerHTML = '';
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      const cell = board[r][c];
+      const el   = document.createElement('div');
+      el.className   = 'cell';
+      el.dataset.row = r;
+      el.dataset.col = c;
+      if (r === c || r + c === 8) el.classList.add('diagonal');
+      if (cell.fixed)              el.classList.add('fixed');
+      setCellContent(el, cell);
+      el.addEventListener('click', () => onCellClick(r, c));
+      boardEl.appendChild(el);
+    }
+  }
+  applyHighlights();
+  updateNumpadCounts();
 }
 
 // ============================================================
-// EVENTOS DEL JUEGO
+// CONTENIDO DE CELDA
 // ============================================================
 
+function setCellContent(el, cell) {
+  el.innerHTML   = '';
+  el.style.color = '';
+  if (cell.value !== 0) {
+    el.textContent = cell.value;
+    if (!cell.fixed && cell.player) el.style.color = cell.player;
+  } else if (cell.notes && cell.notes.length > 0) {
+    renderNotes(el, cell.notes);
+  }
+}
+
+// ============================================================
+// PENCIL MARKS
+// ============================================================
+
+function renderNotes(cellEl, notes) {
+  const grid = document.createElement('div');
+  grid.className = 'notes-grid';
+  for (let n = 1; n <= 9; n++) {
+    const span = document.createElement('span');
+    span.className = 'note-num';
+    if (notes.includes(n)) span.textContent = n;
+    grid.appendChild(span);
+  }
+  cellEl.appendChild(grid);
+}
+
+// ============================================================
+// SELECCIÓN Y RESALTADO
+// ============================================================
+
+function onCellClick(row, col) {
+  selectedRow = row;
+  selectedCol = col;
+  applyHighlights();
+}
+
+function applyHighlights() {
+  boardEl.querySelectorAll('.cell').forEach(el => {
+    const r = parseInt(el.dataset.row);
+    const c = parseInt(el.dataset.col);
+    el.classList.remove('selected', 'highlight', 'same-num');
+    if (selectedRow === -1) return;
+
+    const isSelected = r === selectedRow && c === selectedCol;
+    const sameRow    = r === selectedRow;
+    const sameCol    = c === selectedCol;
+    const sameBox    = Math.floor(r/3) === Math.floor(selectedRow/3) &&
+                       Math.floor(c/3) === Math.floor(selectedCol/3);
+
+    if (isSelected) {
+      el.classList.add('selected');
+    } else if (sameRow || sameCol || sameBox) {
+      el.classList.add('highlight');
+    }
+
+    const selVal = board[selectedRow][selectedCol].value;
+    if (selVal !== 0 && board[r][c].value === selVal) {
+      el.classList.add('same-num');
+    }
+  });
+}
+
+// ============================================================
+// CONTADORES NUMPAD
+// ============================================================
+
+function updateNumpadCounts() {
+  const counts = { 1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0 };
+  for (let r = 0; r < 9; r++)
+    for (let c = 0; c < 9; c++) {
+      const v = board[r][c].value;
+      if (v !== 0) counts[v]++;
+    }
+  numBtns.forEach(btn => {
+    const num       = parseInt(btn.dataset.num);
+    const countEl   = btn.querySelector('.num-count');
+    const remaining = 9 - counts[num];
+    if (countEl) countEl.textContent = remaining > 0 ? remaining : '';
+    btn.classList.toggle('depleted', remaining === 0);
+  });
+}
+
+function getCellEl(row, col) {
+  return boardEl.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+}
+
+// ============================================================
+// EVENTOS DEL SERVIDOR
+// ============================================================
+
+socket.on('board-update', ({ row, col, value, playerColor, correct, notes, prevState }) => {
+  if (prevState) undoStack.push({ row, col, ...prevState });
+
+  board[row][col].value  = value;
+  board[row][col].player = value === 0 ? null : playerColor;
+  board[row][col].notes  = notes || [];
+
+  const el = getCellEl(row, col);
+  el.classList.remove('error', 'correct');
+  el.innerHTML   = '';
+  el.style.color = '';
+
+  if (value !== 0) {
+    el.textContent = value;
+    // FIX: usamos playerColor del servidor directamente.
+    // No comparamos con "myColor" — eso causaba que J2 siempre viera rojo.
+    if (correct) {
+      el.style.color = playerColor;
+      el.classList.add('correct');
+    } else {
+      el.style.color = '#ef4444';
+      el.classList.add('error');
+    }
+  }
+
+  applyHighlights();
+  updateNumpadCounts();
+});
+
+socket.on('note-update', ({ row, col, notes, prevNotes }) => {
+  undoStack.push({
+    row, col,
+    prevValue:  board[row][col].value,
+    prevPlayer: board[row][col].player,
+    prevNotes,
+  });
+  board[row][col].notes = notes;
+  const el = getCellEl(row, col);
+  el.innerHTML = '';
+  if (board[row][col].value === 0 && notes.length > 0) renderNotes(el, notes);
+});
+
+socket.on('undo-confirmed', ({ row, col, value, player, notes }) => {
+  undoStack.pop();
+  board[row][col].value  = value;
+  board[row][col].player = player;
+  board[row][col].notes  = notes || [];
+  const el = getCellEl(row, col);
+  el.classList.remove('error', 'correct');
+  setCellContent(el, board[row][col]);
+  applyHighlights();
+  updateNumpadCounts();
+});
+
 socket.on('game-start', ({ board: newBoard }) => {
-  board = newBoard;
-  gameStarted = true;  // El juego arrancó oficialmente.
+  board = newBoard; gameStarted = true;
   statusMessage.textContent = '¡Juego en curso! Trabajen juntos 🧩';
   renderBoard();
 });
 
-socket.on('game-won', ({ winner }) => {
-  if (!gameStarted) return;  // Guard: ignoramos si el juego no había empezado.
-  winMessage.textContent = `¡Felicitaciones! Completaron el Sudoku X juntos. 🎉`;
+socket.on('game-won', () => {
+  if (!gameStarted) return;
+  winMessage.textContent = '¡Felicitaciones! Completaron el Sudoku X juntos. 🎉';
   winScreen.classList.remove('hidden');
 });
 
@@ -219,21 +284,14 @@ socket.on('board-update-full', ({ board: newBoard }) => {
 
 socket.on('player-disconnected', () => {
   statusMessage.textContent = '⚠️ Tu compañero se desconectó';
-  statusMessage.style.color = '#ff6b6b';
+  statusMessage.style.color = '#ef4444';
 });
 
 // ============================================================
-// INICIALIZAR
+// INIT
 // ============================================================
 
-if (board) {
-  renderBoard();
-  // Si tenemos tablero (Jugador 1 que creó la sala), lo dibujamos.
-}
-
-if (playerIndex === 0) {
-  statusMessage.textContent = 'Sala creada. Compartí el código con tu compañero.';
-} else {
-  statusMessage.textContent = '¡Conectado! El juego ya comenzó.';
-  renderBoard();
-}
+if (board) renderBoard();
+statusMessage.textContent = playerIndex === 0
+  ? 'Sala creada. Compartí el código con tu compañero.'
+  : '¡Conectado! El juego ya comenzó.';

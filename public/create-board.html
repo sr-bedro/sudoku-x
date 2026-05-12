@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sudoku X — Crear tablero</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="create-container">
+
+    <h2 class="create-title">Diseñar tablero</h2>
+    <p class="create-subtitle">
+      Tocá una celda y luego un número para colocarlo.<br>
+      Las celdas que cargues acá serán las fijas de la partida.
+    </p>
+
+    <!-- Tablero de entrada 9x9 -->
+    <div id="board-input" class="board-input"></div>
+
+    <!-- Numpad -->
+    <div class="create-numpad">
+      <button class="create-num-btn" data-num="1">1</button>
+      <button class="create-num-btn" data-num="2">2</button>
+      <button class="create-num-btn" data-num="3">3</button>
+      <button class="create-num-btn" data-num="4">4</button>
+      <button class="create-num-btn" data-num="5">5</button>
+      <button class="create-num-btn" data-num="6">6</button>
+      <button class="create-num-btn" data-num="7">7</button>
+      <button class="create-num-btn" data-num="8">8</button>
+      <button class="create-num-btn" data-num="9">9</button>
+      <button class="create-num-btn clear-btn" data-num="0">✕</button>
+    </div>
+
+    <div id="create-error" class="error-msg hidden"></div>
+
+    <!-- Acciones -->
+    <div class="create-actions">
+      <button id="btn-back" class="btn btn-secondary">← Volver</button>
+      <button id="btn-start" class="btn btn-primary">Empezar partida →</button>
+    </div>
+
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="create-board.js"></script>
+</body>
+</html>

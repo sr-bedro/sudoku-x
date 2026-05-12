@@ -1,53 +1,40 @@
 <!DOCTYPE html>
-<!-- Declara que este es un documento HTML5 -->
-
 <html lang="es">
-<!-- lang="es" ayuda a lectores de pantalla y navegadores a saber el idioma -->
-
 <head>
   <meta charset="UTF-8">
-  <!-- UTF-8 soporta acentos y caracteres especiales (é, ñ, etc.) -->
-
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Esencial para móviles. Sin esto, el sitio se ve como versión desktop achicada.
-       width=device-width: el ancho del viewport = ancho del dispositivo
-       initial-scale=1.0: no hacer zoom inicial -->
-
   <title>Sudoku X — Multijugador</title>
-
   <link rel="stylesheet" href="style.css">
-  <!-- Conectamos el archivo de estilos CSS -->
 </head>
-
 <body>
   <div class="lobby-container">
-    <!-- div es un contenedor genérico. Lo usamos para agrupar elementos
-         y aplicarles estilos con CSS. La clase "lobby-container" nos
-         permite estilizarlo desde CSS. -->
-
     <h1 class="title">Sudoku X</h1>
     <p class="subtitle">Modo cooperativo multijugador</p>
 
     <div class="card">
-      <!-- Esta "card" contiene las opciones de crear o unirse a sala -->
 
+      <!-- Opción 1: tablero aleatorio -->
       <div class="option-section">
-        <h2>Crear nueva sala</h2>
-        <p>Generás un código y se lo mandás a tu compañero</p>
-        <button id="btn-create" class="btn btn-primary">
-          Crear sala
-        </button>
-        <!-- id="btn-create" nos permite seleccionar este botón desde JavaScript
-             con document.getElementById('btn-create') -->
+        <h2>Partida aleatoria</h2>
+        <p>El tablero se genera automáticamente</p>
+        <button id="btn-create" class="btn btn-primary">Crear sala</button>
       </div>
 
       <div class="divider">— o —</div>
-      <!-- Separador visual entre las dos opciones -->
 
+      <!-- Opción 2: tablero propio -->
+      <div class="option-section">
+        <h2>Tablero propio</h2>
+        <p>Cargás vos los números y luego empezás la partida</p>
+        <button id="btn-custom" class="btn btn-custom">Crear tablero</button>
+      </div>
+
+      <div class="divider">— o —</div>
+
+      <!-- Opción 3: unirse -->
       <div class="option-section">
         <h2>Unirse a sala</h2>
         <p>Ingresá el código que te mandó tu compañero</p>
-
         <div class="input-group">
           <input
             type="text"
@@ -56,29 +43,15 @@
             placeholder="Ej: K4M9"
             maxlength="4"
           >
-          <!-- type="text": campo de texto
-               id="room-code-input": para seleccionarlo con JS
-               placeholder: texto de ayuda que desaparece al escribir
-               maxlength="4": máximo 4 caracteres (el código tiene 4) -->
-
-          <button id="btn-join" class="btn btn-secondary">
-            Unirse
-          </button>
+          <button id="btn-join" class="btn btn-secondary btn-join">Unirse</button>
         </div>
       </div>
 
-      <div id="error-message" class="error hidden">
-        <!-- Este div muestra errores. Tiene la clase "hidden" para estar
-             oculto por defecto. JavaScript lo muestra cuando hay error. -->
-      </div>
+      <div id="error-message" class="error-msg hidden"></div>
     </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <!-- Socket.io sirve automáticamente su librería cliente en esta ruta.
-       No necesitás descargar nada extra — Express lo sirve solo. -->
-
   <script src="lobby.js"></script>
-  <!-- Nuestro código JavaScript para esta pantalla -->
 </body>
 </html>

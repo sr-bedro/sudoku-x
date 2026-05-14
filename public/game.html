@@ -2,68 +2,88 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="color-scheme" content="light only">
   <title>Sudoku X</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="game-container">
+  <div class="game-wrapper">
+    <div class="game-container">
 
-    <div class="game-header">
-      <div class="room-info">Sala: <strong id="display-code">----</strong></div>
-      <div class="players-legend">
-        <div class="player-indicator">
-          <div class="color-dot" style="background:#4A90D9"></div>
-          <span>J1</span>
-        </div>
-        <div class="player-indicator">
-          <div class="color-dot" style="background:#E85D75"></div>
-          <span>J2</span>
+      <!-- Header -->
+      <div class="game-header">
+        <button class="home-btn" id="btn-home" title="Inicio">🏠</button>
+        <div id="timer" class="timer">00:00</div>
+        <div class="header-right">
+          <div class="room-info">Sala: <strong id="display-code">----</strong></div>
         </div>
       </div>
-    </div>
 
-    <div id="status-message" class="status-message">Esperando al segundo jugador...</div>
-
-    <div id="board" class="board"></div>
-
-    <!-- Barra de herramientas -->
-    <div class="toolbar">
-      <button class="tool-btn" id="btn-undo">
-        <span class="tool-icon">↩</span>
-        <span class="tool-label">Deshacer</span>
-      </button>
-      <button class="tool-btn" id="btn-erase">
-        <span class="tool-icon">⬜</span>
-        <span class="tool-label">Borrar</span>
-      </button>
-      <button class="tool-btn" id="btn-note">
-        <span class="tool-icon">✏️</span>
-        <span class="tool-label">Lápiz</span>
-      </button>
-    </div>
-
-    <!-- Numpad con contadores -->
-    <div class="numpad">
-      <button class="num-btn" data-num="1"><span class="num-val">1</span><span class="num-count"></span></button>
-      <button class="num-btn" data-num="2"><span class="num-val">2</span><span class="num-count"></span></button>
-      <button class="num-btn" data-num="3"><span class="num-val">3</span><span class="num-count"></span></button>
-      <button class="num-btn" data-num="4"><span class="num-val">4</span><span class="num-count"></span></button>
-      <button class="num-btn" data-num="5"><span class="num-val">5</span><span class="num-count"></span></button>
-      <button class="num-btn" data-num="6"><span class="num-val">6</span><span class="num-count"></span></button>
-      <button class="num-btn" data-num="7"><span class="num-val">7</span><span class="num-count"></span></button>
-      <button class="num-btn" data-num="8"><span class="num-val">8</span><span class="num-count"></span></button>
-      <button class="num-btn" data-num="9"><span class="num-val">9</span><span class="num-count"></span></button>
-    </div>
-
-    <div id="win-screen" class="win-screen hidden">
-      <div class="win-card">
-        <h2>🎉 ¡Completaron el puzzle!</h2>
-        <p id="win-message"></p>
-        <button onclick="sessionStorage.clear(); window.location.href='/'">Jugar de nuevo</button>
+      <!-- Jugadores -->
+      <div class="players-bar">
+        <div class="player-tag" id="p1-tag">
+          <div class="player-dot" style="background:#2563eb"></div>
+          <span id="p1-name">J1</span>
+        </div>
+        <div id="status-message" class="status-message">Esperando...</div>
+        <div class="player-tag" id="p2-tag">
+          <div class="player-dot" style="background:#7c3aed"></div>
+          <span id="p2-name">J2</span>
+        </div>
       </div>
-    </div>
 
+      <!-- Tablero -->
+      <div id="board" class="board"></div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <button class="tool-btn" id="btn-undo">
+          <span class="tool-icon">↩</span>
+          <span class="tool-label">Deshacer</span>
+        </button>
+        <button class="tool-btn" id="btn-erase">
+          <span class="tool-icon">⬜</span>
+          <span class="tool-label">Borrar</span>
+        </button>
+        <button class="tool-btn" id="btn-note">
+          <span class="tool-icon">✏️</span>
+          <span class="tool-label">Lápiz</span>
+        </button>
+        <button class="tool-btn" id="btn-save" title="Guardar partida">
+          <span class="tool-icon">💾</span>
+          <span class="tool-label">Guardar</span>
+        </button>
+      </div>
+
+      <!-- Numpad -->
+      <div class="numpad">
+        <button class="num-btn" data-num="1"><span class="num-val">1</span><span class="num-count"></span></button>
+        <button class="num-btn" data-num="2"><span class="num-val">2</span><span class="num-count"></span></button>
+        <button class="num-btn" data-num="3"><span class="num-val">3</span><span class="num-count"></span></button>
+        <button class="num-btn" data-num="4"><span class="num-val">4</span><span class="num-count"></span></button>
+        <button class="num-btn" data-num="5"><span class="num-val">5</span><span class="num-count"></span></button>
+        <button class="num-btn" data-num="6"><span class="num-val">6</span><span class="num-count"></span></button>
+        <button class="num-btn" data-num="7"><span class="num-val">7</span><span class="num-count"></span></button>
+        <button class="num-btn" data-num="8"><span class="num-val">8</span><span class="num-count"></span></button>
+        <button class="num-btn" data-num="9"><span class="num-val">9</span><span class="num-count"></span></button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast guardado -->
+  <div id="save-toast" class="save-toast hidden">✓ Partida guardada</div>
+
+  <!-- Win -->
+  <div id="win-screen" class="win-screen hidden">
+    <canvas id="confetti-canvas"></canvas>
+    <div class="win-card">
+      <div class="win-emoji">🎉</div>
+      <h2>¡Completaron el puzzle!</h2>
+      <p id="win-message"></p>
+      <button onclick="localStorage.removeItem('sudokuX_savedGame'); sessionStorage.clear(); window.location.href='/'">Jugar de nuevo</button>
+    </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>

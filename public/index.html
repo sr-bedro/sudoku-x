@@ -2,53 +2,86 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sudoku X — Multijugador</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="color-scheme" content="light only">
+  <title>Sudoku X</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <div class="lobby-container">
-    <h1 class="title">Sudoku X</h1>
-    <p class="subtitle">Modo cooperativo multijugador</p>
+<body class="lobby-body">
 
-    <div class="card">
+  <div class="lobby-screen">
 
-      <!-- Opción 1: tablero aleatorio -->
-      <div class="option-section">
-        <h2>Partida aleatoria</h2>
-        <p>El tablero se genera automáticamente</p>
-        <button id="btn-create" class="btn btn-primary">Crear sala</button>
-      </div>
+    <!-- Hero -->
+    <div class="lobby-hero">
+      <div class="lobby-logo">✕</div>
+      <h1 class="lobby-title">Sudoku X</h1>
+      <p class="lobby-sub">Cooperativo · Tiempo real</p>
+    </div>
 
-      <div class="divider">— o —</div>
+    <!-- Nombre -->
+    <div class="name-row">
+      <input
+        type="text"
+        id="player-name"
+        class="name-input"
+        placeholder="Tu nombre"
+        maxlength="14"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+      >
+    </div>
 
-      <!-- Opción 2: tablero propio -->
-      <div class="option-section">
-        <h2>Tablero propio</h2>
-        <p>Cargás vos los números y luego empezás la partida</p>
-        <button id="btn-custom" class="btn btn-custom">Crear tablero</button>
-      </div>
-
-      <div class="divider">— o —</div>
-
-      <!-- Opción 3: unirse -->
-      <div class="option-section">
-        <h2>Unirse a sala</h2>
-        <p>Ingresá el código que te mandó tu compañero</p>
-        <div class="input-group">
-          <input
-            type="text"
-            id="room-code-input"
-            class="code-input"
-            placeholder="Ej: K4M9"
-            maxlength="4"
-          >
-          <button id="btn-join" class="btn btn-secondary btn-join">Unirse</button>
+    <!-- Continuar partida (solo si hay guardado) -->
+    <div id="continue-card" class="action-card continue-card hidden">
+      <div class="action-card-left">
+        <span class="action-icon">▶</span>
+        <div>
+          <div class="action-title">Continuar</div>
+          <div id="continue-meta" class="action-meta"></div>
         </div>
       </div>
-
-      <div id="error-message" class="error-msg hidden"></div>
+      <button id="btn-continue" class="pill-btn pill-continue">Retomar</button>
     </div>
+
+    <!-- Dificultad -->
+    <div class="diff-row">
+      <span class="diff-label">Dificultad</span>
+      <div class="diff-pills">
+        <button class="diff-btn" data-diff="easy">Fácil</button>
+        <button class="diff-btn active" data-diff="hard">Difícil</button>
+      </div>
+    </div>
+
+    <!-- Acciones principales -->
+    <div class="main-actions">
+      <button id="btn-create" class="main-btn main-btn-primary">
+        <span class="main-btn-icon">＋</span>
+        <span>Nueva sala</span>
+      </button>
+      <button id="btn-custom" class="main-btn main-btn-secondary">
+        <span class="main-btn-icon">✎</span>
+        <span>Tablero propio</span>
+      </button>
+    </div>
+
+    <!-- Unirse -->
+    <div class="join-row">
+      <input
+        type="text"
+        id="room-code-input"
+        class="code-input"
+        placeholder="Código de sala"
+        maxlength="4"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+      >
+      <button id="btn-join" class="join-btn">Unirse</button>
+    </div>
+
+    <div id="error-message" class="error-msg hidden"></div>
+
   </div>
 
   <script src="/socket.io/socket.io.js"></script>

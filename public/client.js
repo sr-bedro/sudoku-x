@@ -2,21 +2,32 @@
 // SESIÓN
 // ============================================================
 
+const SAVE_KEY    = 'sudokuX_savedGame';
 const roomCode    = sessionStorage.getItem('roomCode');
 const playerIndex = parseInt(sessionStorage.getItem('playerIndex'));
+const playerName  = sessionStorage.getItem('playerName') || (playerIndex === 0 ? 'Jugador 1' : 'Jugador 2');
+const solution    = JSON.parse(sessionStorage.getItem('solution') || 'null');
 let   board       = JSON.parse(sessionStorage.getItem('board'));
+const savedElapsed = parseInt(sessionStorage.getItem('savedElapsed') || '0');
 
 if (!roomCode) window.location.href = '/';
+
+const isHost = playerIndex === 0;
 
 // ============================================================
 // ESTADO
 // ============================================================
 
-let selectedRow = -1;
-let selectedCol = -1;
-let noteMode    = false;
-let gameStarted = false;
-const undoStack = [];
+let selectedRow    = -1;
+let selectedCol    = -1;
+let noteMode       = false;
+let gameStarted    = false;
+const undoStack    = [];
+let opponentCursor = { row: -1, col: -1 };
+let timerInterval  = null;
+let startTime      = null;
+let elapsedOffset  = savedElapsed;
+let playerNames    = [playerName, 'Jugador 2']; // se actualiza con game-start
 
 // ============================================================
 // SOCKET
@@ -24,7 +35,7 @@ const undoStack = [];
 
 const socket = io();
 socket.on('connect', () => {
-  socket.emit('rejoin-room', { code: roomCode, playerIndex });
+  socket.emit('rejoin-room', { code: roomCode, playerIndex, playerName });
 });
 
 // ============================================================
@@ -40,22 +51,102 @@ const numBtns       = document.querySelectorAll('.num-btn');
 const btnNote       = document.getElementById('btn-note');
 const btnErase      = document.getElementById('btn-erase');
 const btnUndo       = document.getElementById('btn-undo');
+const btnSave       = document.getElementById('btn-save');
+const btnHome       = document.getElementById('btn-home');
+const timerEl       = document.getElementById('timer');
+const p1Name        = document.getElementById('p1-name');
+const p2Name        = document.getElementById('p2-name');
 
 displayCode.textContent = roomCode;
 
+// Solo J1 ve el botón guardar activo
+if (!isHost && btnSave) btnSave.style.opacity = '0.3';
+
 // ============================================================
-// LÁPIZ — toggle
+// TIMER
+// ============================================================
+
+function startTimer(fromServerTime, offset = 0) {
+  elapsedOffset = offset;
+  startTime     = fromServerTime;
+  timerInterval = setInterval(() => {
+    const secs = Math.floor((Date.now() - startTime) / 1000) + elapsedOffset;
+    timerEl.textContent = formatTime(secs);
+  }, 1000);
+}
+
+function stopTimer() { clearInterval(timerInterval); }
+
+function getCurrentElapsed() {
+  if (!startTime) return elapsedOffset;
+  return Math.floor((Date.now() - startTime) / 1000) + elapsedOffset;
+}
+
+function formatTime(s) {
+  return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+}
+
+// ============================================================
+// GUARDAR
+// ============================================================
+
+function doSave() {
+  if (!isHost || !gameStarted) return;
+  const elapsed = getCurrentElapsed();
+  localStorage.setItem(SAVE_KEY, JSON.stringify({
+    roomCode,
+    playerIndex: 0,
+    playerName,
+    board,
+    solution,          // guardamos la solución para poder recrear la sala
+    elapsed,
+    elapsedFormatted:  formatTime(elapsed),
+    savedAt:           new Date().toLocaleString(),
+  }));
+
+  const toast = document.getElementById('save-toast');
+  toast.classList.remove('hidden');
+  setTimeout(() => toast.classList.add('hidden'), 2000);
+}
+
+// Autoguardado cada 30s
+setInterval(doSave, 30000);
+
+btnSave && btnSave.addEventListener('click', () => {
+  if (!isHost) return;
+  doSave();
+});
+
+// ============================================================
+// HOME
+// ============================================================
+
+btnHome.addEventListener('click', () => {
+  if (!gameStarted) { window.location.href = '/'; return; }
+
+  const msg = isHost
+    ? '¿Salir? La partida se guardará. El otro jugador será desconectado.'
+    : '¿Salir? Solo el anfitrión puede continuar la partida guardada.';
+
+  if (!confirm(msg)) return;
+
+  if (isHost) {
+    doSave();
+    socket.emit('host-leave');
+  }
+  sessionStorage.clear();
+  window.location.href = '/';
+});
+
+// ============================================================
+// TOOLBAR
 // ============================================================
 
 btnNote.addEventListener('click', () => {
   noteMode = !noteMode;
   btnNote.classList.toggle('active', noteMode);
-  numBtns.forEach(btn => btn.classList.toggle('note-mode', noteMode));
+  numBtns.forEach(b => b.classList.toggle('note-mode', noteMode));
 });
-
-// ============================================================
-// BORRAR
-// ============================================================
 
 btnErase.addEventListener('click', () => {
   if (selectedRow === -1) return;
@@ -63,17 +154,10 @@ btnErase.addEventListener('click', () => {
   socket.emit('make-move', { row: selectedRow, col: selectedCol, value: 0 });
 });
 
-// ============================================================
-// DESHACER
-// ============================================================
-
 btnUndo.addEventListener('click', () => {
-  if (undoStack.length === 0) return;
+  if (!undoStack.length) return;
   const last = undoStack[undoStack.length - 1];
-  socket.emit('undo-move', {
-    row: last.row, col: last.col,
-    prevValue: last.prevValue, prevNotes: last.prevNotes, prevPlayer: last.prevPlayer,
-  });
+  socket.emit('undo-move', { row: last.row, col: last.col, prevValue: last.prevValue, prevNotes: last.prevNotes, prevPlayer: last.prevPlayer });
 });
 
 // ============================================================
@@ -93,7 +177,7 @@ numBtns.forEach(btn => {
 });
 
 // ============================================================
-// RENDERIZAR TABLERO
+// TABLERO
 // ============================================================
 
 function renderBoard() {
@@ -116,13 +200,8 @@ function renderBoard() {
   updateNumpadCounts();
 }
 
-// ============================================================
-// CONTENIDO DE CELDA
-// ============================================================
-
 function setCellContent(el, cell) {
-  el.innerHTML   = '';
-  el.style.color = '';
+  el.innerHTML = ''; el.style.color = '';
   if (cell.value !== 0) {
     el.textContent = cell.value;
     if (!cell.fixed && cell.player) el.style.color = cell.player;
@@ -130,10 +209,6 @@ function setCellContent(el, cell) {
     renderNotes(el, cell.notes);
   }
 }
-
-// ============================================================
-// PENCIL MARKS
-// ============================================================
 
 function renderNotes(cellEl, notes) {
   const grid = document.createElement('div');
@@ -148,12 +223,18 @@ function renderNotes(cellEl, notes) {
 }
 
 // ============================================================
-// SELECCIÓN Y RESALTADO
+// SELECCIÓN Y CURSOR
 // ============================================================
 
 function onCellClick(row, col) {
-  selectedRow = row;
-  selectedCol = col;
+  if (opponentCursor.row === row && opponentCursor.col === col) {
+    const el = getCellEl(row, col);
+    el.classList.add('blocked-flash');
+    setTimeout(() => el.classList.remove('blocked-flash'), 400);
+    return;
+  }
+  selectedRow = row; selectedCol = col;
+  socket.emit('cursor-move', { row, col });
   applyHighlights();
 }
 
@@ -161,45 +242,94 @@ function applyHighlights() {
   boardEl.querySelectorAll('.cell').forEach(el => {
     const r = parseInt(el.dataset.row);
     const c = parseInt(el.dataset.col);
-    el.classList.remove('selected', 'highlight', 'same-num');
+    el.classList.remove('selected', 'highlight', 'same-num', 'opponent-cell');
+
+    if (opponentCursor.row === r && opponentCursor.col === c) {
+      el.classList.add('opponent-cell'); return;
+    }
     if (selectedRow === -1) return;
 
-    const isSelected = r === selectedRow && c === selectedCol;
-    const sameRow    = r === selectedRow;
-    const sameCol    = c === selectedCol;
-    const sameBox    = Math.floor(r/3) === Math.floor(selectedRow/3) &&
-                       Math.floor(c/3) === Math.floor(selectedCol/3);
-
-    if (isSelected) {
+    if (r === selectedRow && c === selectedCol) {
       el.classList.add('selected');
-    } else if (sameRow || sameCol || sameBox) {
+    } else if (r === selectedRow || c === selectedCol ||
+              (Math.floor(r/3) === Math.floor(selectedRow/3) && Math.floor(c/3) === Math.floor(selectedCol/3))) {
       el.classList.add('highlight');
     }
 
     const selVal = board[selectedRow][selectedCol].value;
-    if (selVal !== 0 && board[r][c].value === selVal) {
-      el.classList.add('same-num');
-    }
+    if (selVal !== 0 && board[r][c].value === selVal) el.classList.add('same-num');
   });
 }
 
 // ============================================================
-// CONTADORES NUMPAD
+// ANIMACIONES
+// ============================================================
+
+function animateSection(section) {
+  const cells = [];
+  if (section.type === 'row')
+    for (let c = 0; c < 9; c++) cells.push(getCellEl(section.index, c));
+  else if (section.type === 'col')
+    for (let r = 0; r < 9; r++) cells.push(getCellEl(r, section.index));
+  else
+    for (let r = section.boxRow*3; r < section.boxRow*3+3; r++)
+      for (let c = section.boxCol*3; c < section.boxCol*3+3; c++)
+        cells.push(getCellEl(r, c));
+
+  cells.forEach((el, i) => {
+    if (!el) return;
+    setTimeout(() => {
+      el.classList.add('section-complete');
+      setTimeout(() => el.classList.remove('section-complete'), 700);
+    }, i * 45);
+  });
+}
+
+function launchConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+  const pts = Array.from({ length: 150 }, () => ({
+    x: Math.random() * canvas.width, y: Math.random() * canvas.height - canvas.height,
+    w: Math.random() * 10 + 5, h: Math.random() * 6 + 3,
+    color: ['#2563eb','#7c3aed','#f59e0b','#10b981','#ef4444','#ec4899'][Math.floor(Math.random()*6)],
+    speed: Math.random() * 3 + 2, angle: Math.random() * 360,
+    spin: Math.random() * 6 - 3, drift: Math.random() * 2 - 1,
+  }));
+  let n = 0;
+  (function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height); n++;
+    pts.forEach(p => {
+      p.y += p.speed; p.x += p.drift; p.angle += p.spin;
+      ctx.save();
+      ctx.translate(p.x + p.w/2, p.y + p.h/2);
+      ctx.rotate(p.angle * Math.PI / 180);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = Math.max(0, 1 - n/200);
+      ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      ctx.restore();
+    });
+    if (n < 220) requestAnimationFrame(draw);
+  })();
+}
+
+// ============================================================
+// NUMPAD CONTADORES
 // ============================================================
 
 function updateNumpadCounts() {
-  const counts = { 1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0 };
+  const counts = {1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0};
   for (let r = 0; r < 9; r++)
     for (let c = 0; c < 9; c++) {
       const v = board[r][c].value;
       if (v !== 0) counts[v]++;
     }
   numBtns.forEach(btn => {
-    const num       = parseInt(btn.dataset.num);
-    const countEl   = btn.querySelector('.num-count');
-    const remaining = 9 - counts[num];
-    if (countEl) countEl.textContent = remaining > 0 ? remaining : '';
-    btn.classList.toggle('depleted', remaining === 0);
+    const num = parseInt(btn.dataset.num);
+    const rem = 9 - counts[num];
+    const ce  = btn.querySelector('.num-count');
+    if (ce) ce.textContent = rem > 0 ? rem : '';
+    btn.classList.toggle('depleted', rem === 0);
   });
 }
 
@@ -219,17 +349,17 @@ socket.on('board-update', ({ row, col, value, playerColor, correct, notes, prevS
   board[row][col].notes  = notes || [];
 
   const el = getCellEl(row, col);
-  el.classList.remove('error', 'correct');
-  el.innerHTML   = '';
-  el.style.color = '';
+  el.classList.remove('error', 'correct', 'correct-flash');
+  el.innerHTML = ''; el.style.color = '';
 
   if (value !== 0) {
     el.textContent = value;
-    // FIX: usamos playerColor del servidor directamente.
-    // No comparamos con "myColor" — eso causaba que J2 siempre viera rojo.
     if (correct) {
       el.style.color = playerColor;
+      // Doble animación: pop + flash de fondo para más contraste
       el.classList.add('correct');
+      el.classList.add('correct-flash');
+      setTimeout(() => el.classList.remove('correct-flash'), 600);
     } else {
       el.style.color = '#ef4444';
       el.classList.add('error');
@@ -241,12 +371,7 @@ socket.on('board-update', ({ row, col, value, playerColor, correct, notes, prevS
 });
 
 socket.on('note-update', ({ row, col, notes, prevNotes }) => {
-  undoStack.push({
-    row, col,
-    prevValue:  board[row][col].value,
-    prevPlayer: board[row][col].player,
-    prevNotes,
-  });
+  undoStack.push({ row, col, prevValue: board[row][col].value, prevPlayer: board[row][col].player, prevNotes });
   board[row][col].notes = notes;
   const el = getCellEl(row, col);
   el.innerHTML = '';
@@ -255,36 +380,62 @@ socket.on('note-update', ({ row, col, notes, prevNotes }) => {
 
 socket.on('undo-confirmed', ({ row, col, value, player, notes }) => {
   undoStack.pop();
-  board[row][col].value  = value;
-  board[row][col].player = player;
-  board[row][col].notes  = notes || [];
+  board[row][col] = { ...board[row][col], value, player, notes: notes || [] };
   const el = getCellEl(row, col);
-  el.classList.remove('error', 'correct');
+  el.classList.remove('error','correct','correct-flash');
   setCellContent(el, board[row][col]);
-  applyHighlights();
-  updateNumpadCounts();
+  applyHighlights(); updateNumpadCounts();
 });
 
-socket.on('game-start', ({ board: newBoard }) => {
-  board = newBoard; gameStarted = true;
-  statusMessage.textContent = '¡Juego en curso! Trabajen juntos 🧩';
+socket.on('sections-complete', ({ sections }) => {
+  sections.forEach((s, i) => setTimeout(() => animateSection(s), i * 300));
+});
+
+socket.on('opponent-cursor', ({ row, col }) => {
+  opponentCursor = { row, col }; applyHighlights();
+});
+
+socket.on('player-joined', ({ name }) => {
+  statusMessage.textContent = `✓ ${name} se unió`;
+  if (p2Name) p2Name.textContent = name;
+});
+
+socket.on('game-start', ({ board: newBoard, startTime: srvTime, savedElapsed: srvSaved, players }) => {
+  board       = newBoard;
+  gameStarted = true;
+
+  // Actualizar nombres
+  if (players) {
+    if (p1Name && players[0]) p1Name.textContent = players[0].name;
+    if (p2Name && players[1]) p2Name.textContent = players[1].name;
+  }
+
+  statusMessage.textContent = '¡Juego en curso! 🧩';
+  startTimer(srvTime, srvSaved || savedElapsed);
   renderBoard();
 });
 
-socket.on('game-won', () => {
+socket.on('game-won', ({ elapsed }) => {
   if (!gameStarted) return;
-  winMessage.textContent = '¡Felicitaciones! Completaron el Sudoku X juntos. 🎉';
+  stopTimer();
+  if (isHost) localStorage.removeItem(SAVE_KEY);
+  winMessage.textContent = `Tiempo: ${formatTime(elapsed)} ⏱`;
   winScreen.classList.remove('hidden');
+  launchConfetti();
 });
 
-socket.on('board-update-full', ({ board: newBoard }) => {
-  board = newBoard;
-  renderBoard();
+socket.on('board-update-full', ({ board: nb }) => { board = nb; renderBoard(); });
+
+socket.on('host-left', () => {
+  stopTimer();
+  alert('El anfitrión abandonó la partida.');
+  sessionStorage.clear(); window.location.href = '/';
 });
 
 socket.on('player-disconnected', () => {
   statusMessage.textContent = '⚠️ Tu compañero se desconectó';
   statusMessage.style.color = '#ef4444';
+  opponentCursor = { row: -1, col: -1 }; applyHighlights();
 });
 
 // ============================================================
@@ -292,6 +443,7 @@ socket.on('player-disconnected', () => {
 // ============================================================
 
 if (board) renderBoard();
+if (p1Name) p1Name.textContent = playerName;
 statusMessage.textContent = playerIndex === 0
   ? 'Sala creada. Compartí el código con tu compañero.'
   : '¡Conectado! El juego ya comenzó.';

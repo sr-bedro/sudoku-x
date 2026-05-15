@@ -11,32 +11,31 @@
   <div class="game-wrapper">
     <div class="game-container">
 
-      <!-- Header -->
       <div class="game-header">
-        <button class="home-btn" id="btn-home" title="Inicio">🏠</button>
+        <button class="home-btn" id="btn-home">🏠</button>
         <div id="timer" class="timer">00:00</div>
         <div class="header-right">
           <div class="room-info">Sala: <strong id="display-code">----</strong></div>
+          <div class="error-badge">
+            ✕ <span id="error-count">0</span>
+          </div>
         </div>
       </div>
 
-      <!-- Jugadores -->
       <div class="players-bar">
-        <div class="player-tag" id="p1-tag">
+        <div class="player-tag">
           <div class="player-dot" style="background:#2563eb"></div>
           <span id="p1-name">J1</span>
         </div>
         <div id="status-message" class="status-message">Esperando...</div>
-        <div class="player-tag" id="p2-tag">
+        <div class="player-tag">
           <div class="player-dot" style="background:#7c3aed"></div>
           <span id="p2-name">J2</span>
         </div>
       </div>
 
-      <!-- Tablero -->
       <div id="board" class="board"></div>
 
-      <!-- Toolbar -->
       <div class="toolbar">
         <button class="tool-btn" id="btn-undo">
           <span class="tool-icon">↩</span>
@@ -50,13 +49,16 @@
           <span class="tool-icon">✏️</span>
           <span class="tool-label">Lápiz</span>
         </button>
-        <button class="tool-btn" id="btn-save" title="Guardar partida">
+        <button class="tool-btn" id="btn-sound">
+          <span class="tool-icon">🔊</span>
+          <span class="tool-label">Sonido</span>
+        </button>
+        <button class="tool-btn" id="btn-save">
           <span class="tool-icon">💾</span>
           <span class="tool-label">Guardar</span>
         </button>
       </div>
 
-      <!-- Numpad -->
       <div class="numpad">
         <button class="num-btn" data-num="1"><span class="num-val">1</span><span class="num-count"></span></button>
         <button class="num-btn" data-num="2"><span class="num-val">2</span><span class="num-count"></span></button>
@@ -72,10 +74,8 @@
     </div>
   </div>
 
-  <!-- Toast guardado -->
   <div id="save-toast" class="save-toast hidden">✓ Partida guardada</div>
 
-  <!-- Win -->
   <div id="win-screen" class="win-screen hidden">
     <canvas id="confetti-canvas"></canvas>
     <div class="win-card">
@@ -87,6 +87,8 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
+  <!-- sounds.js primero — client.js lo usa -->
+  <script src="sounds.js"></script>
   <script src="client.js"></script>
 </body>
 </html>

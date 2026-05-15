@@ -503,3 +503,49 @@ body.lobby-body { overflow-y: auto; }
   border: none; border-radius: 10px;
   color: white; font-size: 1rem; font-weight: 600; cursor: pointer;
 }
+
+/* ============================================================
+   BADGE DE ERRORES
+   ============================================================ */
+
+.error-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #7788aa;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.header-right.has-errors .error-badge,
+.error-badge.has-errors {
+  color: #ef4444;
+}
+
+/* ============================================================
+   CONFLICTO — dos celdas con el mismo número en conflicto
+   ============================================================ */
+
+.cell.conflict {
+  background: rgba(239, 68, 68, 0.12) !important;
+  outline: 1.5px solid rgba(239, 68, 68, 0.5);
+  outline-offset: -1.5px;
+}
+
+/* ============================================================
+   BOTÓN SONIDO MUTED
+   ============================================================ */
+
+.tool-btn.muted {
+  opacity: 0.5;
+}
+
+/* ============================================================
+   TECLADO — resaltar celda al navegar con flechas
+   ============================================================ */
+
+.cell.keyboard-focus {
+  outline: 2px dashed #2563eb;
+  outline-offset: -2px;
+}

@@ -5,26 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="color-scheme" content="light only">
   <title>Sudoku X</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="lobby-body">
+<body class="lobby-body" data-theme="light">
 
   <div class="lobby-screen">
 
-    <!-- Hero -->
-    <div class="lobby-hero">
-      <div class="lobby-logo">✕</div>
-      <h1 class="lobby-title">Sudoku X</h1>
-      <p class="lobby-sub">Cooperativo · Tiempo real</p>
+    <!-- Header con tema -->
+    <div class="lobby-topbar">
+      <div class="lobby-brand">
+        <div class="brand-logo">X</div>
+        <span class="brand-name">Sudoku X</span>
+      </div>
+      <button class="theme-toggle" id="theme-toggle" title="Cambiar tema">
+        <span id="theme-icon">🌙</span>
+      </button>
     </div>
 
-    <!-- Nombre -->
-    <div class="name-row">
+    <!-- Hero -->
+    <div class="lobby-hero">
+      <p class="lobby-tagline">Cooperativo · Tiempo real · Diagonales</p>
+    </div>
+
+    <!-- Nombre del jugador -->
+    <div class="lobby-section">
+      <label class="section-label">Tu nombre</label>
       <input
         type="text"
         id="player-name"
         class="name-input"
-        placeholder="Tu nombre"
+        placeholder="¿Cómo te llamás?"
         maxlength="14"
         autocomplete="off"
         autocorrect="off"
@@ -33,54 +46,77 @@
     </div>
 
     <!-- Continuar partida (solo si hay guardado) -->
-    <div id="continue-card" class="action-card continue-card hidden">
-      <div class="action-card-left">
-        <span class="action-icon">▶</span>
-        <div>
-          <div class="action-title">Continuar</div>
-          <div id="continue-meta" class="action-meta"></div>
+    <div id="continue-card" class="continue-card hidden">
+      <div class="continue-left">
+        <div class="continue-icon">▶</div>
+        <div class="continue-info">
+          <div class="continue-title">Continuar partida</div>
+          <div id="continue-meta" class="continue-meta"></div>
         </div>
       </div>
-      <button id="btn-continue" class="pill-btn pill-continue">Retomar</button>
+      <button id="btn-continue" class="btn-pill btn-pill-blue">Retomar</button>
     </div>
 
     <!-- Dificultad -->
-    <div class="diff-row">
-      <span class="diff-label">Dificultad</span>
-      <div class="diff-pills">
-        <button class="diff-btn" data-diff="easy">Fácil</button>
-        <button class="diff-btn active" data-diff="hard">Difícil</button>
+    <div class="lobby-section">
+      <label class="section-label">Dificultad</label>
+      <div class="diff-selector">
+        <button class="diff-opt" data-diff="easy">
+          <span class="diff-name">Fácil</span>
+          <span class="diff-desc">35 pistas</span>
+        </button>
+        <button class="diff-opt active" data-diff="hard">
+          <span class="diff-name">Difícil</span>
+          <span class="diff-desc">26 pistas</span>
+        </button>
       </div>
     </div>
 
     <!-- Acciones principales -->
     <div class="main-actions">
-      <button id="btn-create" class="main-btn main-btn-primary">
-        <span class="main-btn-icon">＋</span>
-        <span>Nueva sala</span>
+      <button id="btn-create" class="main-action-btn primary-btn">
+        <span class="action-icon">＋</span>
+        <div class="action-text">
+          <span class="action-title">Nueva sala</span>
+          <span class="action-sub">Tablero aleatorio</span>
+        </div>
       </button>
-      <button id="btn-custom" class="main-btn main-btn-secondary">
-        <span class="main-btn-icon">✎</span>
-        <span>Tablero propio</span>
+      <button id="btn-custom" class="main-action-btn secondary-btn">
+        <span class="action-icon">✎</span>
+        <div class="action-text">
+          <span class="action-title">Mi tablero</span>
+          <span class="action-sub">Cargás los números</span>
+        </div>
       </button>
     </div>
 
-    <!-- Unirse -->
-    <div class="join-row">
+    <!-- Divisor -->
+    <div class="or-divider"><span>o unite a una sala</span></div>
+
+    <!-- Unirse — siempre al fondo, grande y cómodo -->
+    <div class="join-section">
       <input
         type="text"
         id="room-code-input"
-        class="code-input"
-        placeholder="Código de sala"
+        class="join-input"
+        placeholder="Código  ·  ej: K4M9"
         maxlength="4"
         autocomplete="off"
         autocorrect="off"
         spellcheck="false"
       >
-      <button id="btn-join" class="join-btn">Unirse</button>
+      <button id="btn-join" class="join-btn">
+        <span>Unirse</span>
+        <span class="join-arrow">→</span>
+      </button>
     </div>
 
     <div id="error-message" class="error-msg hidden"></div>
+
+    <!-- Footer -->
+    <div class="lobby-footer">
+      Sudoku X · Cooperativo multijugador
+    </div>
 
   </div>
 

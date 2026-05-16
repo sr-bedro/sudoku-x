@@ -5,9 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="color-scheme" content="light only">
   <title>Sudoku X</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-theme="light">
   <div class="game-wrapper">
     <div class="game-container">
 
@@ -15,20 +18,23 @@
         <button class="home-btn" id="btn-home">🏠</button>
         <div id="timer" class="timer">00:00</div>
         <div class="header-right">
-          <div class="room-info">Sala: <strong id="display-code">----</strong></div>
-          <div class="error-badge">
-            ✕ <span id="error-count">0</span>
+          <div class="room-code-display">
+            <span id="display-code">----</span>
+            <button id="btn-share" class="share-btn" title="Compartir">
+              <span>📤</span>
+            </button>
           </div>
+          <div class="error-badge" id="error-badge">✕ <span id="error-count">0</span></div>
         </div>
       </div>
 
       <div class="players-bar">
-        <div class="player-tag">
+        <div class="player-tag p1-tag">
           <div class="player-dot" style="background:#2563eb"></div>
           <span id="p1-name">J1</span>
         </div>
         <div id="status-message" class="status-message">Esperando...</div>
-        <div class="player-tag">
+        <div class="player-tag p2-tag">
           <div class="player-dot" style="background:#7c3aed"></div>
           <span id="p2-name">J2</span>
         </div>
@@ -42,7 +48,7 @@
           <span class="tool-label">Deshacer</span>
         </button>
         <button class="tool-btn" id="btn-erase">
-          <span class="tool-icon">⬜</span>
+          <span class="tool-icon">⌫</span>
           <span class="tool-label">Borrar</span>
         </button>
         <button class="tool-btn" id="btn-note">
@@ -76,18 +82,47 @@
 
   <div id="save-toast" class="save-toast hidden">✓ Partida guardada</div>
 
+  <!-- Modal compartir -->
+  <div id="share-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h3>Invitar a jugar</h3>
+      <div class="share-code-display" id="share-code-big">----</div>
+      <p class="share-hint">Mandá este código o el link directo</p>
+      <div class="share-buttons">
+        <button id="share-whatsapp" class="share-action-btn whatsapp-btn">
+          <span>💬</span> WhatsApp
+        </button>
+        <button id="share-copy" class="share-action-btn copy-btn">
+          <span>📋</span> Copiar link
+        </button>
+      </div>
+      <button id="share-close" class="modal-close">Cerrar</button>
+    </div>
+  </div>
+
   <div id="win-screen" class="win-screen hidden">
     <canvas id="confetti-canvas"></canvas>
     <div class="win-card">
       <div class="win-emoji">🎉</div>
-      <h2>¡Completaron el puzzle!</h2>
-      <p id="win-message"></p>
-      <button onclick="localStorage.removeItem('sudokuX_savedGame'); sessionStorage.clear(); window.location.href='/'">Jugar de nuevo</button>
+      <h2>¡Lo lograron!</h2>
+      <div class="win-stats">
+        <div class="win-stat">
+          <span class="win-stat-val" id="win-time">--:--</span>
+          <span class="win-stat-label">Tiempo</span>
+        </div>
+        <div class="win-stat-divider"></div>
+        <div class="win-stat">
+          <span class="win-stat-val" id="win-errors">0</span>
+          <span class="win-stat-label">Errores</span>
+        </div>
+      </div>
+      <button onclick="localStorage.removeItem('sudokuX_savedGame'); sessionStorage.clear(); window.location.href='/'">
+        Jugar de nuevo
+      </button>
     </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <!-- sounds.js primero — client.js lo usa -->
   <script src="sounds.js"></script>
   <script src="client.js"></script>
 </body>

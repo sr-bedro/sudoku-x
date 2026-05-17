@@ -851,3 +851,922 @@ body.lobby-body {
   color: white; font-size: 1rem; font-weight: 800;
   cursor: pointer; font-family: 'Nunito', sans-serif;
 }
+
+/* ============================================================
+   BOTTOM NAVIGATION
+   ============================================================ */
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 64px;
+  background: var(--surface);
+  border-top: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  z-index: 50;
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+}
+
+.nav-btn {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 3px;
+  padding: 8px 4px;
+  background: none; border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav-icon  { font-size: 1.4rem; line-height: 1; transition: transform 0.2s; }
+.nav-label { font-size: 0.65rem; font-weight: 700; color: var(--text-dim); font-family: 'Nunito', sans-serif; }
+
+.nav-btn.active .nav-icon  { transform: scale(1.1); }
+.nav-btn.active .nav-label { color: var(--p1); }
+
+/* ============================================================
+   VIEWS — sistema de tabs
+   ============================================================ */
+
+.view {
+  display: none;
+  flex-direction: column;
+  height: calc(100dvh - 64px); /* menos la nav */
+  overflow: hidden;
+}
+
+.active-view { display: flex; }
+
+.view-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 16px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ============================================================
+   LOBBY — HOME TAB
+   ============================================================ */
+
+body.lobby-body {
+  overflow: hidden;
+  height: 100dvh;
+  background: var(--bg);
+}
+
+.home-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0 16px;
+}
+
+.home-brand { display: flex; align-items: center; gap: 8px; }
+
+.brand-logo-sm {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--p1), var(--p2));
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; font-weight: 900; color: white;
+}
+
+.brand-title { font-size: 1.1rem; font-weight: 800; color: var(--text); }
+
+.streak-badge {
+  display: flex; align-items: center; gap: 4px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 0.85rem; font-weight: 800; color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.home-section { margin-bottom: 20px; }
+
+.section-title {
+  font-size: 0.72rem; font-weight: 800;
+  color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+/* Continuar en home */
+.continue-card-home {
+  background: var(--surface);
+  border: 2px solid var(--p1);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  box-shadow: 0 4px 16px rgba(37,99,235,0.12);
+}
+.continue-card-left { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+.continue-card-icon {
+  width: 36px; height: 36px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--p1), var(--p2));
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.9rem; color: white;
+}
+.continue-card-title { font-size: 0.9rem; font-weight: 800; color: var(--p1); }
+.continue-card-meta  { font-size: 0.72rem; color: var(--text-dim); margin-top: 1px; }
+
+.pill-btn {
+  padding: 8px 18px; border: none; border-radius: 20px;
+  font-size: 0.85rem; font-weight: 800; cursor: pointer;
+  white-space: nowrap; font-family: 'Nunito', sans-serif;
+}
+.pill-blue { background: var(--p1); color: white; }
+
+/* Unirse en home */
+.join-row-home { display: flex; gap: 8px; }
+
+.join-input-home {
+  flex: 1; padding: 13px 12px;
+  background: var(--surface);
+  border: 2px solid var(--border); border-radius: 13px;
+  font-size: 1.1rem; font-weight: 800; color: var(--text);
+  text-align: center; letter-spacing: 6px; text-transform: uppercase;
+  font-family: 'Nunito', sans-serif;
+  box-shadow: var(--shadow);
+}
+.join-input-home::placeholder { letter-spacing: 1px; font-size: 0.8rem; font-weight: 600; color: var(--text-dim); }
+.join-input-home:focus { outline: none; border-color: var(--p1); }
+
+.join-btn-home {
+  padding: 13px 16px;
+  background: var(--text); color: var(--bg);
+  border: none; border-radius: 13px;
+  font-size: 0.9rem; font-weight: 800; cursor: pointer;
+  white-space: nowrap; font-family: 'Nunito', sans-serif;
+  box-shadow: var(--shadow);
+}
+.join-btn-home:active { transform: scale(0.96); }
+
+/* Tablero propio */
+.custom-card {
+  width: 100%;
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1.5px solid var(--border); border-radius: 14px;
+  cursor: pointer; text-align: left;
+  box-shadow: var(--shadow); font-family: 'Nunito', sans-serif;
+}
+.custom-card:active { transform: scale(0.98); }
+.custom-card-icon { font-size: 1.4rem; }
+.custom-card-text { flex: 1; }
+.custom-card-title { font-size: 0.95rem; font-weight: 800; color: var(--text); }
+.custom-card-sub   { font-size: 0.75rem; color: var(--text-dim); font-weight: 600; }
+.custom-card-arrow { font-size: 1.4rem; color: var(--text-dim); }
+
+/* Botón Nuevo Juego fijo */
+.nuevo-juego-bar {
+  position: sticky; bottom: 0;
+  padding: 12px 16px;
+  background: linear-gradient(to top, var(--bg) 80%, transparent);
+}
+
+.nuevo-juego-btn {
+  width: 100%; padding: 16px;
+  background: linear-gradient(135deg, var(--p1), #1d4ed8);
+  color: white; border: none; border-radius: 16px;
+  font-size: 1.1rem; font-weight: 900;
+  cursor: pointer; font-family: 'Nunito', sans-serif;
+  box-shadow: 0 6px 20px rgba(37,99,235,0.35);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.nuevo-juego-btn:active { transform: scale(0.97); box-shadow: 0 3px 10px rgba(37,99,235,0.25); }
+
+/* ============================================================
+   BOTTOM SHEET — genérico
+   ============================================================ */
+
+.sheet-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 90;
+  opacity: 0; transition: opacity 0.3s;
+  backdrop-filter: blur(3px);
+}
+.sheet-overlay.overlay-open { opacity: 1; }
+
+.bottom-sheet {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--surface);
+  border-radius: 24px 24px 0 0;
+  padding: 12px 20px 32px;
+  z-index: 100;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+  max-height: 85dvh;
+  overflow-y: auto;
+}
+.bottom-sheet.sheet-open { transform: translateY(0); }
+
+.sheet-handle {
+  width: 40px; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+
+.sheet-title {
+  font-size: 1.2rem; font-weight: 900;
+  color: var(--text); text-align: center;
+  margin-bottom: 6px;
+}
+
+.sheet-sub {
+  font-size: 0.85rem; color: var(--text-dim);
+  text-align: center; margin-bottom: 20px; font-weight: 600;
+}
+
+.sheet-close-btn {
+  width: 100%; margin-top: 12px;
+  padding: 13px; border-radius: 12px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  font-size: 0.9rem; font-weight: 700;
+  color: var(--text-dim); cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+}
+
+/* ============================================================
+   SHEET — Nuevo Juego (dificultad)
+   ============================================================ */
+
+.diff-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+
+.diff-list-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px;
+  background: var(--surface2);
+  border: 2px solid var(--border); border-radius: 14px;
+  cursor: pointer; text-align: left;
+  font-family: 'Nunito', sans-serif;
+  transition: border-color 0.15s, transform 0.1s;
+}
+.diff-list-item:active { transform: scale(0.98); }
+.diff-list-item.active-diff { border-color: var(--p1); background: var(--highlight); }
+
+.diff-emoji { font-size: 1.6rem; }
+.diff-list-info { flex: 1; }
+.diff-list-name { display: block; font-size: 1rem; font-weight: 800; color: var(--text); }
+.diff-list-desc { display: block; font-size: 0.75rem; color: var(--text-dim); font-weight: 600; margin-top: 1px; }
+.diff-list-arrow { font-size: 1.3rem; color: var(--text-dim); }
+
+/* ============================================================
+   SHEET — Ajustes
+   ============================================================ */
+
+.settings-list { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+
+.settings-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-label { font-size: 0.95rem; font-weight: 700; color: var(--text); }
+
+.toggle-btn {
+  padding: 6px 18px;
+  border-radius: 20px; border: 2px solid var(--border);
+  background: var(--surface2);
+  font-size: 0.8rem; font-weight: 800;
+  color: var(--text-dim); cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  transition: background 0.15s, border-color 0.15s;
+}
+.toggle-btn.active {
+  background: var(--p1); border-color: var(--p1); color: white;
+}
+
+.settings-action-btn {
+  padding: 7px 16px;
+  background: var(--surface2); border: 1.5px solid var(--border);
+  border-radius: 10px; font-size: 0.82rem; font-weight: 700;
+  color: var(--text); cursor: pointer; font-family: 'Nunito', sans-serif;
+}
+
+.settings-theme-pills { display: flex; gap: 6px; }
+
+.theme-pill {
+  width: 36px; height: 36px;
+  border: 2px solid var(--border); border-radius: 10px;
+  background: var(--surface2); font-size: 1rem;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.15s;
+}
+.theme-pill:active { transform: scale(0.92); }
+
+/* ============================================================
+   SHEET — Compartir / Invitar
+   ============================================================ */
+
+.share-code-big {
+  font-size: 2.8rem; font-weight: 900;
+  color: var(--p1); letter-spacing: 10px;
+  text-align: center; margin: 12px 0 8px;
+}
+
+.share-hint {
+  font-size: 0.8rem; color: var(--text-dim);
+  text-align: center; margin-bottom: 20px; font-weight: 600;
+  line-height: 1.4;
+}
+
+.share-actions { display: flex; flex-direction: column; gap: 10px; }
+
+.share-btn-wa {
+  width: 100%; padding: 15px;
+  background: #25D366; color: white;
+  border: none; border-radius: 14px;
+  font-size: 1rem; font-weight: 800; cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+}
+.share-btn-copy {
+  width: 100%; padding: 15px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border); border-radius: 14px;
+  font-size: 1rem; font-weight: 800; cursor: pointer;
+  color: var(--text); font-family: 'Nunito', sans-serif;
+}
+
+/* Animación de espera */
+.waiting-animation {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 16px;
+  padding: 20px 0;
+}
+
+.waiting-dots { display: flex; gap: 8px; }
+.waiting-dots span {
+  width: 10px; height: 10px;
+  background: var(--p1); border-radius: 50%;
+  animation: dotPulse 1.2s ease infinite;
+}
+.waiting-dots span:nth-child(2) { animation-delay: 0.2s; }
+.waiting-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes dotPulse {
+  0%,100% { opacity: 0.3; transform: scale(0.85); }
+  50%      { opacity: 1;   transform: scale(1.1); }
+}
+
+.waiting-text { font-size: 0.9rem; color: var(--text-dim); font-weight: 700; text-align: center; }
+.waiting-code {
+  font-size: 2rem; font-weight: 900; color: var(--p1);
+  letter-spacing: 8px;
+}
+
+/* ============================================================
+   PERFIL
+   ============================================================ */
+
+.profile-header {
+  display: flex; align-items: center; gap: 16px;
+  padding: 24px 0 20px;
+}
+
+.profile-avatar {
+  width: 64px; height: 64px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--p1), var(--p2));
+  border-radius: 20px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.8rem; font-weight: 900; color: white;
+  box-shadow: 0 4px 16px rgba(37,99,235,0.25);
+}
+
+.profile-name-input {
+  font-size: 1.2rem; font-weight: 800;
+  color: var(--text); background: transparent;
+  border: none; border-bottom: 2px solid var(--border);
+  padding: 4px 0; width: 100%;
+  font-family: 'Nunito', sans-serif;
+}
+.profile-name-input:focus { outline: none; border-color: var(--p1); }
+.profile-name-input::placeholder { color: var(--text-dim); font-weight: 600; }
+
+.profile-sub { font-size: 0.78rem; color: var(--text-dim); font-weight: 600; margin-top: 4px; }
+
+/* Stats grid */
+.stats-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px; margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 14px; padding: 16px 12px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.stat-val   { font-size: 1.6rem; font-weight: 900; color: var(--p1); display: block; }
+.stat-label { font-size: 0.72rem; color: var(--text-dim); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; display: block; }
+
+/* Tema en perfil */
+.profile-section { margin-bottom: 24px; }
+
+.theme-options { display: flex; gap: 10px; }
+
+.theme-opt {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; gap: 6px;
+  padding: 12px 8px;
+  background: var(--surface);
+  border: 2px solid var(--border); border-radius: 14px;
+  cursor: pointer; font-size: 0.78rem; font-weight: 700;
+  color: var(--text-dim); font-family: 'Nunito', sans-serif;
+}
+.theme-opt.active { border-color: var(--p1); color: var(--p1); }
+
+.theme-preview {
+  width: 32px; height: 20px; border-radius: 6px;
+}
+.light-preview { background: linear-gradient(135deg, #f4f6fb, #ffffff); border: 1px solid #dde2ef; }
+.dark-preview  { background: linear-gradient(135deg, #0f1117, #1c2333); }
+.ocean-preview { background: linear-gradient(135deg, #0a1628, #102040); }
+
+/* Historial */
+.history-list { display: flex; flex-direction: column; gap: 6px; }
+.history-empty { font-size: 0.85rem; color: var(--text-dim); text-align: center; padding: 20px; font-weight: 600; }
+
+.history-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1.5px solid var(--border); border-radius: 12px;
+}
+.history-left { display: flex; align-items: center; gap: 10px; }
+.history-right { display: flex; align-items: center; gap: 12px; }
+
+.history-diff {
+  font-size: 0.72rem; font-weight: 800;
+  padding: 3px 8px; border-radius: 20px;
+  text-transform: capitalize;
+}
+.history-diff.easy { background: #dcfce7; color: #16a34a; }
+.history-diff.hard { background: #fee2e2; color: #dc2626; }
+
+.history-date  { font-size: 0.78rem; color: var(--text-dim); font-weight: 600; }
+.history-time  { font-size: 0.85rem; font-weight: 800; color: var(--text); }
+.history-errors { font-size: 0.78rem; color: var(--text-dim); font-weight: 700; }
+
+/* ============================================================
+   PLACEHOLDER (Batalla)
+   ============================================================ */
+
+.placeholder-view {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 100%; text-align: center;
+  padding: 40px 24px;
+  gap: 16px;
+}
+.placeholder-icon { font-size: 4rem; }
+.placeholder-view h2 { font-size: 1.5rem; font-weight: 900; color: var(--text); }
+.placeholder-view p { font-size: 0.9rem; color: var(--text-dim); line-height: 1.6; max-width: 280px; }
+.coming-soon-badge {
+  padding: 8px 20px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  font-size: 0.85rem; font-weight: 800; color: var(--text-dim);
+}
+
+/* ============================================================
+   JUEGO — ajustes específicos
+   ============================================================ */
+
+.icon-btn {
+  width: 38px; height: 38px;
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 10px; font-size: 1.1rem;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--shadow); -webkit-tap-highlight-color: transparent;
+}
+
+.header-actions { display: flex; align-items: center; gap: 6px; }
+
+/* J2 en espera — tenue */
+.p2-waiting { opacity: 0.4; }
+
+/* Toast de error flotante */
+.error-toast {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--error); color: white;
+  padding: 10px 20px; border-radius: 20px;
+  font-size: 0.9rem; font-weight: 700; z-index: 300;
+  font-family: 'Nunito', sans-serif;
+  animation: toastIn 0.3s ease;
+  white-space: nowrap;
+}
+
+/* Spinner */
+.spinner {
+  display: inline-block; width: 18px; height: 18px;
+  border: 2.5px solid rgba(255,255,255,0.4);
+  border-top-color: white; border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============================================================
+   BATALLA — PANTALLAS
+   ============================================================ */
+
+.battle-screen {
+  width: 100dvw;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg);
+  padding: 16px 16px 32px;
+  overflow-y: auto;
+}
+
+.battle-screen.hidden { display: none; }
+
+.battle-back-btn {
+  align-self: flex-start;
+  padding: 8px 14px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  font-size: 0.85rem; font-weight: 700;
+  color: var(--text-dim); cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  margin-bottom: 20px;
+}
+
+/* ============================================================
+   BATALLA — PANTALLA DE BÚSQUEDA
+   ============================================================ */
+
+.battle-search-content {
+  width: 100%; max-width: 400px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 20px;
+}
+
+.battle-logo { font-size: 3.5rem; text-align: center; }
+
+.battle-title {
+  font-size: 2rem; font-weight: 900;
+  color: var(--text); text-align: center;
+  margin-top: -8px;
+}
+
+.battle-subtitle {
+  font-size: 0.85rem; color: var(--text-dim);
+  text-align: center; font-weight: 600;
+  margin-top: -12px;
+}
+
+.battle-diff-selector { width: 100%; }
+
+.battle-diff-pills {
+  display: flex; gap: 8px; margin-top: 8px;
+}
+
+.battle-diff-pill {
+  flex: 1; padding: 10px;
+  background: var(--surface);
+  border: 2px solid var(--border); border-radius: 12px;
+  font-size: 0.9rem; font-weight: 800;
+  color: var(--text-dim); cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  transition: all 0.15s;
+}
+.battle-diff-pill.active {
+  border-color: #e02454;
+  background: rgba(224,36,84,0.08);
+  color: #e02454;
+}
+
+.battle-actions {
+  width: 100%;
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+.battle-main-btn {
+  width: 100%; display: flex; align-items: center; gap: 14px;
+  padding: 16px; border: none; border-radius: 16px;
+  cursor: pointer; text-align: left;
+  font-family: 'Nunito', sans-serif;
+  transition: transform 0.1s;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+.battle-main-btn:active { transform: scale(0.97); }
+
+.primary-battle-btn {
+  background: linear-gradient(135deg, #e02454, #b91c49);
+  color: white;
+}
+.secondary-battle-btn {
+  background: var(--surface);
+  border: 1.5px solid var(--border) !important;
+  color: var(--text);
+}
+
+.battle-btn-icon { font-size: 1.8rem; flex-shrink: 0; }
+.battle-btn-text { display: flex; flex-direction: column; gap: 2px; }
+.battle-btn-title { font-size: 1rem; font-weight: 800; }
+.battle-btn-sub   { font-size: 0.75rem; opacity: 0.8; font-weight: 600; }
+
+.battle-join-section { width: 100%; }
+.battle-join-row { display: flex; gap: 8px; margin-top: 8px; }
+
+/* ============================================================
+   BATALLA — MATCHMAKING ANIMATION
+   ============================================================ */
+
+.battle-waiting-content {
+  width: 100%; max-width: 360px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 20px;
+  padding-top: 20px;
+}
+
+.battle-waiting-title {
+  font-size: 1.4rem; font-weight: 900;
+  color: var(--text); text-align: center;
+}
+
+.matchmaking-animation {
+  display: flex; align-items: center; gap: 20px;
+  padding: 24px;
+  background: var(--surface);
+  border: 1.5px solid var(--border); border-radius: 20px;
+  width: 100%;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.07);
+}
+
+.mm-player {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; gap: 8px;
+}
+
+.mm-avatar {
+  width: 56px; height: 56px;
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem; font-weight: 900; color: white;
+}
+
+.you-avatar  { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+.opp-avatar-loading {
+  background: var(--surface2);
+  border: 2px dashed var(--border);
+}
+
+.mm-searching-dots {
+  display: flex; gap: 5px;
+}
+.mm-searching-dots span {
+  width: 8px; height: 8px;
+  background: var(--text-dim); border-radius: 50%;
+  animation: dotPulse 1.2s ease infinite;
+}
+.mm-searching-dots span:nth-child(2) { animation-delay: 0.2s; }
+.mm-searching-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+.mm-name { font-size: 0.82rem; font-weight: 700; color: var(--text-dim); }
+
+.mm-vs {
+  font-size: 1.2rem; font-weight: 900;
+  color: #e02454; flex-shrink: 0;
+}
+
+.waiting-hint {
+  font-size: 0.8rem; color: var(--text-dim);
+  text-align: center; font-weight: 600;
+}
+
+/* Sala privada */
+.private-code-display {
+  font-size: 2.5rem; font-weight: 900;
+  color: #e02454; letter-spacing: 8px;
+  text-align: center;
+  background: var(--surface);
+  border: 2px solid #e02454;
+  border-radius: 16px; padding: 16px 24px;
+  width: 100%; max-width: 320px;
+}
+
+.waiting-dots-row {
+  display: flex; gap: 8px; margin-top: 8px;
+}
+.waiting-dots-row span {
+  width: 10px; height: 10px;
+  background: #e02454; border-radius: 50%;
+  animation: dotPulse 1.2s ease infinite;
+}
+.waiting-dots-row span:nth-child(2) { animation-delay: 0.2s; }
+.waiting-dots-row span:nth-child(3) { animation-delay: 0.4s; }
+
+/* ============================================================
+   BATALLA — PANTALLA DE JUEGO
+   ============================================================ */
+
+#screen-battle {
+  padding: 8px;
+  gap: clamp(4px, 1dvh, 10px);
+  justify-content: flex-start;
+}
+
+.battle-header {
+  width: 100%;
+  max-width: calc(var(--cell-size) * 9 + 6px);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.battle-timer-block {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+
+.battle-timer {
+  font-size: 1.2rem; font-weight: 900;
+  color: var(--text); letter-spacing: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.battle-penalty {
+  font-size: 0.78rem; font-weight: 800;
+  color: #ef4444; letter-spacing: 1px;
+}
+
+.battle-penalty.penalty-flash {
+  animation: penaltyFlash 1s ease;
+}
+
+@keyframes penaltyFlash {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.3); color: #ef4444; }
+}
+
+.battle-header-right {
+  display: flex; align-items: center; gap: 8px;
+}
+
+/* Puntos de errores */
+.battle-errors-display {
+  display: flex; gap: 5px; align-items: center;
+}
+
+.error-dot {
+  font-size: 1rem; color: #e02454;
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.error-dot-used {
+  opacity: 0.2;
+  transform: scale(0.8);
+}
+
+/* ============================================================
+   BARRA DE PROGRESO
+   ============================================================ */
+
+.battle-progress-bar-section {
+  width: 100%;
+  max-width: calc(var(--cell-size) * 9 + 6px);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.battle-progress-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+}
+
+.progress-label {
+  font-size: 0.7rem; font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0; max-width: 60px;
+  overflow: hidden; text-overflow: ellipsis;
+}
+
+.you-label { color: #2563eb; }
+.opp-label { color: #e02454; text-align: right; }
+
+.progress-track {
+  flex: 1; height: 10px;
+  background: var(--surface2);
+  border-radius: 5px; overflow: hidden;
+  position: relative;
+  border: 1px solid var(--border);
+}
+
+.progress-fill {
+  position: absolute; top: 0; height: 100%;
+  border-radius: 5px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 0%;
+}
+
+.your-fill {
+  left: 0;
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+}
+
+.opp-fill {
+  right: 0;
+  background: linear-gradient(270deg, #e02454, #f87171);
+}
+
+.battle-progress-nums {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 0.72rem; font-weight: 700; color: var(--text-dim);
+  justify-content: center;
+}
+
+.progress-total { color: var(--text-dim); }
+.progress-sep   { color: var(--border-strong); }
+
+/* ============================================================
+   RESULTADO DE BATALLA
+   ============================================================ */
+
+.battle-result {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200;
+  backdrop-filter: blur(6px);
+}
+
+.battle-result.hidden { display: none; }
+
+#battle-confetti {
+  position: absolute; inset: 0; pointer-events: none;
+}
+
+.result-card {
+  position: relative; z-index: 1;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 24px;
+  padding: 36px 24px;
+  text-align: center;
+  width: min(340px, 92vw);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+  animation: winCardPop 0.5s cubic-bezier(0.175,0.885,0.32,1.275);
+}
+
+.result-emoji {
+  font-size: 3.5rem; margin-bottom: 8px;
+  animation: winSpin 0.6s ease 0.3s both;
+}
+
+.result-card h2 {
+  font-size: 1.5rem; font-weight: 900; color: var(--text);
+  margin-bottom: 8px;
+}
+
+.result-sub {
+  font-size: 0.85rem; color: var(--text-dim); font-weight: 600;
+  margin-bottom: 20px; line-height: 1.4;
+}
+
+.result-stats {
+  display: flex; align-items: center; justify-content: center;
+  gap: 16px; margin-bottom: 24px;
+  background: var(--surface2); border-radius: 14px; padding: 14px;
+}
+
+.result-stat { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.result-stat-val   { font-size: 1.4rem; font-weight: 900; color: #e02454; }
+.result-stat-label { font-size: 0.65rem; color: var(--text-dim); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.result-actions { display: flex; flex-direction: column; gap: 8px; }
+
+.result-btn {
+  width: 100%; padding: 14px;
+  border: none; border-radius: 14px;
+  font-size: 1rem; font-weight: 800;
+  cursor: pointer; font-family: 'Nunito', sans-serif;
+}
+
+.result-btn-secondary {
+  background: var(--surface2);
+  border: 1.5px solid var(--border) !important;
+  color: var(--text-dim);
+}
+
+/* Colores batalla en tablero */
+.cell.battle-correct { animation: correctPop 0.28s cubic-bezier(0.175,0.885,0.32,1.275); }
+.cell.battle-error   { animation: errorShake 0.3s ease; color: #ef4444 !important; }

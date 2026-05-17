@@ -1,63 +1,133 @@
 const socket   = io();
 const SAVE_KEY = 'sudokuX_savedGame';
+const STATS_KEY = 'sudokuX_stats';
 
-// ---- DOM ----
-const nameInput      = document.getElementById('player-name');
-const btnCreate      = document.getElementById('btn-create');
-const btnCustom      = document.getElementById('btn-custom');
-const btnJoin        = document.getElementById('btn-join');
-const btnContinue    = document.getElementById('btn-continue');
-const codeInput      = document.getElementById('room-code-input');
-const errorDiv       = document.getElementById('error-message');
-const continueCard   = document.getElementById('continue-card');
-const continueMeta   = document.getElementById('continue-meta');
-const diffOpts       = document.querySelectorAll('.diff-opt');
-const themeToggle    = document.getElementById('theme-toggle');
-const themeIcon      = document.getElementById('theme-icon');
+// ============================================================
+// NAVEGACIÓN — bottom tabs
+// ============================================================
 
-// ---- Tema ----
+const navBtns = document.querySelectorAll('.nav-btn');
+const views   = document.querySelectorAll('.view');
+
+navBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    navBtns.forEach(b => b.classList.remove('active'));
+    views.forEach(v => v.classList.remove('active-view'));
+    btn.classList.add('active');
+    document.getElementById(`view-${tab}`).classList.add('active-view');
+    if (tab === 'perfil') renderProfile();
+  });
+});
+
+// ============================================================
+// TEMA
+// ============================================================
+
 const savedTheme = localStorage.getItem('theme') || 'light';
 applyTheme(savedTheme);
 
-themeToggle.addEventListener('click', () => {
-  const current = document.body.dataset.theme;
-  const next    = current === 'light' ? 'dark' : current === 'dark' ? 'ocean' : 'light';
-  applyTheme(next);
-  localStorage.setItem('theme', next);
+document.querySelectorAll('.theme-opt').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.theme-opt').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    applyTheme(btn.dataset.theme);
+    localStorage.setItem('theme', btn.dataset.theme);
+  });
 });
 
 function applyTheme(theme) {
   document.body.dataset.theme = theme;
-  const icons = { light: '🌙', dark: '🌊', ocean: '☀️' };
-  if (themeIcon) themeIcon.textContent = icons[theme] || '🌙';
+  document.querySelectorAll('.theme-opt').forEach(b => {
+    b.classList.toggle('active', b.dataset.theme === theme);
+  });
 }
 
-// ---- Nombre ----
+// ============================================================
+// NOMBRE DEL JUGADOR
+// ============================================================
+
+const nameInput = document.getElementById('player-name');
 const savedName = localStorage.getItem('playerName') || '';
-if (savedName) nameInput.value = savedName;
-nameInput.addEventListener('input', () => {
-  localStorage.setItem('playerName', nameInput.value.trim());
+if (nameInput && savedName) nameInput.value = savedName;
+
+nameInput && nameInput.addEventListener('input', () => {
+  const name = nameInput.value.trim();
+  localStorage.setItem('playerName', name);
+  updateProfileAvatar(name);
 });
 
 function getPlayerName() {
-  return nameInput.value.trim() || 'Anónimo';
+  const n = nameInput ? nameInput.value.trim() : '';
+  return n || localStorage.getItem('playerName') || 'Anónimo';
 }
 
-// ---- Dificultad ----
-let selectedDiff = localStorage.getItem('difficulty') || 'hard';
-diffOpts.forEach(btn => {
-  if (btn.dataset.diff === selectedDiff) btn.classList.add('active');
-  else btn.classList.remove('active');
+function updateProfileAvatar(name) {
+  const av = document.getElementById('profile-avatar');
+  if (av) av.textContent = name ? name[0].toUpperCase() : '?';
+}
 
-  btn.addEventListener('click', () => {
-    diffOpts.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    selectedDiff = btn.dataset.diff;
-    localStorage.setItem('difficulty', selectedDiff);
-  });
-});
+updateProfileAvatar(savedName);
 
-// ---- Continuar partida ----
+// ============================================================
+// ESTADÍSTICAS
+// ============================================================
+
+function getStats() {
+  try {
+    return JSON.parse(localStorage.getItem(STATS_KEY)) || {
+      wins: 0, totalErrors: 0, bestTime: null, streak: 0, history: []
+    };
+  } catch { return { wins: 0, totalErrors: 0, bestTime: null, streak: 0, history: [] }; }
+}
+
+function renderProfile() {
+  const stats = getStats();
+  document.getElementById('stat-wins').textContent   = stats.wins || 0;
+  document.getElementById('stat-streak').textContent = stats.streak || 0;
+  document.getElementById('stat-errors').textContent = stats.totalErrors || 0;
+
+  const best = stats.bestTime;
+  document.getElementById('stat-best').textContent = best ? formatTime(best) : '--:--';
+
+  // Historial
+  const list = document.getElementById('history-list');
+  if (!stats.history || stats.history.length === 0) {
+    list.innerHTML = '<div class="history-empty">Aún no jugaste ninguna partida</div>';
+  } else {
+    list.innerHTML = stats.history.slice(0, 10).map(h => `
+      <div class="history-item">
+        <div class="history-left">
+          <span class="history-diff ${h.difficulty}">${h.difficulty || 'difícil'}</span>
+          <span class="history-date">${h.date || ''}</span>
+        </div>
+        <div class="history-right">
+          <span class="history-time">⏱ ${formatTime(h.elapsed)}</span>
+          <span class="history-errors">✕ ${h.errors || 0}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Badge de racha
+  const streak = stats.streak || 0;
+  const badge = document.getElementById('streak-badge');
+  const count = document.getElementById('streak-count');
+  if (badge && streak > 0) {
+    badge.classList.remove('hidden');
+    if (count) count.textContent = streak;
+  }
+}
+
+function formatTime(s) {
+  if (!s && s !== 0) return '--:--';
+  return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+}
+
+// ============================================================
+// CONTINUAR PARTIDA
+// ============================================================
+
 const saved = (() => {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -65,16 +135,16 @@ const saved = (() => {
   } catch { return null; }
 })();
 
-if (saved && saved.playerIndex === 0 && saved.board && saved.solution) {
-  continueCard.classList.remove('hidden');
-  const fecha  = saved.savedAt || '';
-  const tiempo = saved.elapsedFormatted || '00:00';
-  continueMeta.textContent = `${fecha} · ${tiempo}`;
+if (saved && saved.board && saved.solution) {
+  const card = document.getElementById('continue-card');
+  const meta = document.getElementById('continue-meta');
+  if (card) card.classList.remove('hidden');
+  if (meta) meta.textContent = `${saved.savedAt || ''} · ${saved.elapsedFormatted || '00:00'}`;
 }
 
-btnContinue && btnContinue.addEventListener('click', () => {
+document.getElementById('btn-continue') && document.getElementById('btn-continue').addEventListener('click', () => {
   if (!saved) return;
-  setLoading(btnContinue, true);
+  setLoading(document.getElementById('btn-continue'), true);
   socket.emit('create-room-from-save', {
     board:      saved.board,
     solution:   saved.solution,
@@ -84,44 +154,90 @@ btnContinue && btnContinue.addEventListener('click', () => {
   });
 });
 
-// ---- Nueva sala ----
-btnCreate.addEventListener('click', () => {
-  localStorage.removeItem(SAVE_KEY);
-  setLoading(btnCreate, true);
-  socket.emit('create-room', { difficulty: selectedDiff, playerName: getPlayerName() });
+// ============================================================
+// BOTTOM SHEET — Nuevo Juego
+// ============================================================
+
+const sheet        = document.getElementById('nuevo-juego-sheet');
+const sheetOverlay = document.getElementById('nuevo-juego-overlay');
+const sheetSub     = document.getElementById('sheet-sub');
+
+document.getElementById('btn-nuevo-juego').addEventListener('click', () => {
+  openSheet();
 });
 
-// ---- Tablero propio ----
-btnCustom.addEventListener('click', () => {
-  localStorage.removeItem(SAVE_KEY);
-  window.location.href = '/create-board.html';
+sheetOverlay.addEventListener('click', closeSheet);
+
+function openSheet() {
+  sheet.classList.remove('hidden');
+  sheetOverlay.classList.remove('hidden');
+  setTimeout(() => {
+    sheet.classList.add('sheet-open');
+    sheetOverlay.classList.add('overlay-open');
+  }, 10);
+}
+
+function closeSheet() {
+  sheet.classList.remove('sheet-open');
+  sheetOverlay.classList.remove('overlay-open');
+  setTimeout(() => {
+    sheet.classList.add('hidden');
+    sheetOverlay.classList.add('hidden');
+  }, 300);
+}
+
+// Seleccionar dificultad en el sheet
+document.querySelectorAll('.diff-list-item').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const diff = btn.dataset.diff;
+    closeSheet();
+    setTimeout(() => {
+      localStorage.removeItem(SAVE_KEY);
+      localStorage.setItem('difficulty', diff);
+      setLoading(document.getElementById('btn-nuevo-juego'), true);
+      socket.emit('create-room', { difficulty: diff, playerName: getPlayerName() });
+    }, 320);
+  });
 });
 
-// ---- Unirse ----
+// ============================================================
+// UNIRSE A SALA
+// ============================================================
+
+const codeInput = document.getElementById('room-code-input');
+const btnJoin   = document.getElementById('btn-join');
+
 btnJoin.addEventListener('click', () => {
-  const code = codeInput.value.trim();
+  const code = codeInput.value.trim().toUpperCase();
   if (code.length !== 4) { showError('El código debe tener 4 caracteres'); return; }
   setLoading(btnJoin, true);
   socket.emit('join-room', { code, playerName: getPlayerName() });
 });
 
-codeInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter') btnJoin.click();
+codeInput.addEventListener('keydown', e => { if (e.key === 'Enter') btnJoin.click(); });
+codeInput.addEventListener('input', () => { codeInput.value = codeInput.value.toUpperCase(); });
+
+// ============================================================
+// TABLERO PROPIO
+// ============================================================
+
+document.getElementById('btn-custom').addEventListener('click', () => {
+  localStorage.removeItem(SAVE_KEY);
+  window.location.href = '/create-board.html';
 });
 
-// Auto-mayúsculas en el código
-codeInput.addEventListener('input', () => {
-  codeInput.value = codeInput.value.toUpperCase();
-});
+// ============================================================
+// RESPUESTAS DEL SERVIDOR
+// ============================================================
 
-// ---- Respuestas del servidor ----
 socket.on('room-created', ({ code, board, solution, playerIndex, savedElapsed }) => {
-  sessionStorage.setItem('roomCode',     code);
-  sessionStorage.setItem('playerIndex',  playerIndex);
-  sessionStorage.setItem('board',        JSON.stringify(board));
-  sessionStorage.setItem('solution',     JSON.stringify(solution));
-  sessionStorage.setItem('playerName',   getPlayerName());
-  sessionStorage.setItem('theme',        document.body.dataset.theme);
+  sessionStorage.setItem('roomCode',    code);
+  sessionStorage.setItem('playerIndex', playerIndex);
+  sessionStorage.setItem('board',       JSON.stringify(board));
+  sessionStorage.setItem('solution',    JSON.stringify(solution));
+  sessionStorage.setItem('playerName',  getPlayerName());
+  sessionStorage.setItem('theme',       document.body.dataset.theme);
+  sessionStorage.setItem('difficulty',  localStorage.getItem('difficulty') || 'hard');
   if (savedElapsed) sessionStorage.setItem('savedElapsed', savedElapsed);
   window.location.href = '/game.html';
 });
@@ -137,26 +253,39 @@ socket.on('room-joined', ({ code, board, playerIndex }) => {
 
 socket.on('error', (msg) => {
   showError(msg);
-  setLoading(btnCreate, false);
   setLoading(btnJoin, false);
-  btnContinue && setLoading(btnContinue, false);
+  setLoading(document.getElementById('btn-nuevo-juego'), false);
 });
 
-// ---- Helpers ----
+// ============================================================
+// HELPERS
+// ============================================================
+
 function showError(msg) {
-  errorDiv.textContent = msg;
-  errorDiv.classList.remove('hidden');
-  setTimeout(() => errorDiv.classList.add('hidden'), 3000);
+  const el = document.getElementById('error-message');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  setTimeout(() => el.classList.add('hidden'), 3000);
 }
 
 function setLoading(btn, loading) {
   if (!btn) return;
   if (loading) {
-    btn.dataset.originalText = btn.innerHTML;
+    btn.dataset.orig = btn.innerHTML;
     btn.innerHTML = '<span class="spinner"></span>';
     btn.disabled  = true;
   } else {
-    btn.innerHTML = btn.dataset.originalText || btn.innerHTML;
+    btn.innerHTML = btn.dataset.orig || btn.innerHTML;
     btn.disabled  = false;
   }
+}
+
+// ---- Tab batalla → redirige a battle.html ----
+const batallaBtnInNav = document.querySelector('[data-tab="batalla"]');
+if (batallaBtnInNav) {
+  batallaBtnInNav.addEventListener('click', (e) => {
+    e.stopImmediatePropagation(); // Cancelar el handler de tab normal
+    window.location.href = '/battle.html';
+  }, true); // capture = true para que corra antes que el handler genérico
 }

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="color-scheme" content="light only">
+  <title>Sudoku X — Batalla</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="light">
+
+  <!-- ============================================================
+       PANTALLA DE BÚSQUEDA
+       ============================================================ -->
+  <div id="screen-search" class="battle-screen">
+    <button class="battle-back-btn" id="btn-back-search">← Volver</button>
+
+    <div class="battle-search-content">
+      <div class="battle-logo">⚔️</div>
+      <h1 class="battle-title">Batalla</h1>
+      <p class="battle-subtitle">Competí contra otro jugador en tiempo real</p>
+
+      <div class="battle-diff-selector">
+        <div class="section-label">Dificultad</div>
+        <div class="battle-diff-pills">
+          <button class="battle-diff-pill" data-diff="easy">Fácil</button>
+          <button class="battle-diff-pill active" data-diff="hard">Difícil</button>
+        </div>
+      </div>
+
+      <div class="battle-actions">
+        <button id="btn-find-match" class="battle-main-btn primary-battle-btn">
+          <span class="battle-btn-icon">🌐</span>
+          <div class="battle-btn-text">
+            <span class="battle-btn-title">Buscar partida</span>
+            <span class="battle-btn-sub">Cola global · Aleatorio</span>
+          </div>
+        </button>
+
+        <button id="btn-private-battle" class="battle-main-btn secondary-battle-btn">
+          <span class="battle-btn-icon">🔒</span>
+          <div class="battle-btn-text">
+            <span class="battle-btn-title">Sala privada</span>
+            <span class="battle-btn-sub">Con código · Para amigos</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- Unirse con código -->
+      <div class="battle-join-section">
+        <div class="section-label">Unirse con código</div>
+        <div class="battle-join-row">
+          <input
+            type="text"
+            id="battle-code-input"
+            class="join-input-home"
+            placeholder="Código · ej: BK4M9"
+            maxlength="5"
+            autocomplete="off"
+            autocorrect="off"
+            spellcheck="false"
+          >
+          <button id="btn-join-battle" class="join-btn-home">Unirse →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       PANTALLA DE ESPERA (matchmaking)
+       ============================================================ -->
+  <div id="screen-waiting" class="battle-screen hidden">
+    <button class="battle-back-btn" id="btn-cancel-search">✕ Cancelar</button>
+
+    <div class="battle-waiting-content">
+      <div class="battle-logo">🔍</div>
+      <h2 class="battle-waiting-title">Buscando oponente...</h2>
+
+      <div class="matchmaking-animation">
+        <div class="mm-player mm-you">
+          <div class="mm-avatar you-avatar" id="mm-your-avatar">?</div>
+          <span class="mm-name" id="mm-your-name">Vos</span>
+        </div>
+        <div class="mm-vs">VS</div>
+        <div class="mm-player mm-opp">
+          <div class="mm-avatar opp-avatar-loading">
+            <div class="mm-searching-dots">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+          <span class="mm-name">Buscando...</span>
+        </div>
+      </div>
+
+      <p class="waiting-hint">Mientras tanto podés practicar en modo normal</p>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       PANTALLA DE ESPERA (sala privada creada)
+       ============================================================ -->
+  <div id="screen-private-wait" class="battle-screen hidden">
+    <button class="battle-back-btn" id="btn-cancel-private">✕ Cancelar</button>
+
+    <div class="battle-waiting-content">
+      <div class="battle-logo">🔒</div>
+      <h2 class="battle-waiting-title">Sala privada creada</h2>
+      <p class="battle-subtitle">Compartí el código con tu oponente</p>
+
+      <div class="private-code-display" id="private-code-display">-----</div>
+
+      <div class="share-actions" style="margin-top: 20px;">
+        <button id="private-share-wa" class="share-btn-wa">💬 Compartir por WhatsApp</button>
+        <button id="private-copy-code" class="share-btn-copy">📋 Copiar código</button>
+      </div>
+
+      <div class="waiting-dots-row">
+        <span></span><span></span><span></span>
+      </div>
+      <p class="waiting-hint">Esperando que se una tu oponente...</p>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       PANTALLA DE JUEGO — BATALLA
+       ============================================================ -->
+  <div id="screen-battle" class="battle-screen hidden">
+
+    <!-- Header de batalla -->
+    <div class="battle-header">
+      <button class="icon-btn" id="btn-home-battle">🏠</button>
+
+      <div class="battle-timer-block">
+        <div id="battle-timer" class="battle-timer">00:00</div>
+        <div id="battle-penalty" class="battle-penalty hidden">+<span id="penalty-secs">0</span>s</div>
+      </div>
+
+      <div class="battle-header-right">
+        <div class="battle-errors-display">
+          <span id="battle-error-dot-1" class="error-dot">●</span>
+          <span id="battle-error-dot-2" class="error-dot">●</span>
+          <span id="battle-error-dot-3" class="error-dot">●</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barra de progreso — vos vs oponente -->
+    <div class="battle-progress-bar-section">
+      <div class="battle-progress-row">
+        <span class="progress-label you-label" id="your-progress-name">Vos</span>
+        <div class="progress-track">
+          <div class="progress-fill your-fill" id="your-progress-fill"></div>
+          <div class="progress-fill opp-fill" id="opp-progress-fill"></div>
+        </div>
+        <span class="progress-label opp-label" id="opp-progress-name">Oponente</span>
+      </div>
+      <div class="battle-progress-nums">
+        <span id="your-cells-count">0</span>
+        <span class="progress-total" id="total-cells-display">/ 0</span>
+        <span class="progress-sep">·</span>
+        <span class="progress-total" id="opp-cells-display">0</span>
+      </div>
+    </div>
+
+    <!-- Tablero -->
+    <div id="battle-board" class="board"></div>
+
+    <!-- Toolbar batalla -->
+    <div class="toolbar">
+      <button class="tool-btn" id="battle-btn-undo">
+        <span class="tool-icon">↩</span>
+        <span class="tool-label">Deshacer</span>
+      </button>
+      <button class="tool-btn" id="battle-btn-erase">
+        <span class="tool-icon">⌫</span>
+        <span class="tool-label">Borrar</span>
+      </button>
+      <button class="tool-btn" id="battle-btn-note">
+        <span class="tool-icon">✏️</span>
+        <span class="tool-label">Lápiz</span>
+      </button>
+    </div>
+
+    <!-- Numpad -->
+    <div class="numpad" id="battle-numpad">
+      <button class="num-btn" data-num="1"><span class="num-val">1</span><span class="num-count"></span></button>
+      <button class="num-btn" data-num="2"><span class="num-val">2</span><span class="num-count"></span></button>
+      <button class="num-btn" data-num="3"><span class="num-val">3</span><span class="num-count"></span></button>
+      <button class="num-btn" data-num="4"><span class="num-val">4</span><span class="num-count"></span></button>
+      <button class="num-btn" data-num="5"><span class="num-val">5</span><span class="num-count"></span></button>
+      <button class="num-btn" data-num="6"><span class="num-val">6</span><span class="num-count"></span></button>
+      <button class="num-btn" data-num="7"><span class="num-val">7</span><span class="num-count"></span></button>
+      <button class="num-btn" data-num="8"><span class="num-val">8</span><span class="num-count"></span></button>
+      <button class="num-btn" data-num="9"><span class="num-val">9</span><span class="num-count"></span></button>
+    </div>
+
+  </div>
+
+  <!-- ============================================================
+       RESULTADO FINAL
+       ============================================================ -->
+  <div id="battle-result" class="battle-result hidden">
+    <canvas id="battle-confetti"></canvas>
+    <div class="result-card">
+      <div id="result-emoji" class="result-emoji">🏆</div>
+      <h2 id="result-title">¡Ganaste!</h2>
+      <p id="result-subtitle" class="result-sub"></p>
+
+      <div class="result-stats">
+        <div class="result-stat">
+          <span class="result-stat-val" id="result-time">--:--</span>
+          <span class="result-stat-label">Tiempo</span>
+        </div>
+        <div class="win-stat-divider"></div>
+        <div class="result-stat">
+          <span class="result-stat-val" id="result-errors">0</span>
+          <span class="result-stat-label">Errores</span>
+        </div>
+        <div class="win-stat-divider"></div>
+        <div class="result-stat">
+          <span class="result-stat-val" id="result-penalty">+0s</span>
+          <span class="result-stat-label">Penalización</span>
+        </div>
+      </div>
+
+      <div class="result-actions">
+        <button id="btn-rematch" class="result-btn primary-battle-btn">Revancha</button>
+        <button id="btn-back-home" class="result-btn result-btn-secondary">Volver al inicio</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="battle-toast" class="save-toast hidden"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="sounds.js"></script>
+  <script src="battle.js"></script>
+</body>
+</html>

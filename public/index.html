@@ -2,125 +2,338 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="color-scheme" content="light only">
   <title>Sudoku X</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <style>
+    html { touch-action: manipulation; overscroll-behavior: none; }
+    body.lobby-body { overflow: hidden; overscroll-behavior: none; touch-action: manipulation; }
+    .view-scroll { overscroll-behavior: contain; }
+
+    /* Join stacked */
+    .join-stack { display: flex; flex-direction: column; gap: 10px; }
+    .join-btn-full {
+      width: 100%; padding: 14px;
+      background: var(--text); color: var(--bg);
+      border: none; border-radius: 13px;
+      font-size: 1rem; font-weight: 800; cursor: pointer;
+      font-family: 'Nunito', sans-serif;
+      box-shadow: var(--shadow);
+      transition: transform 0.1s;
+    }
+    .join-btn-full:active { transform: scale(0.97); }
+
+    /* Batalla inline */
+    .batalla-content {
+      display: flex; flex-direction: column;
+      align-items: center; padding: 24px 0 32px; gap: 20px; width: 100%;
+    }
+    .batalla-logo  { font-size: 3rem; }
+    .batalla-title { font-size: 1.8rem; font-weight: 900; color: var(--text); margin-top: -8px; }
+    .batalla-sub   { font-size: 0.85rem; color: var(--text-dim); font-weight: 600; margin-top: -12px; text-align: center; }
+    .batalla-diff-pills { display: flex; gap: 8px; width: 100%; }
+    .batalla-diff-pill {
+      flex: 1; padding: 10px;
+      background: var(--surface); border: 2px solid var(--border); border-radius: 12px;
+      font-size: 0.9rem; font-weight: 800; color: var(--text-dim); cursor: pointer;
+      font-family: 'Nunito', sans-serif; transition: all 0.15s;
+    }
+    .batalla-diff-pill.active { border-color: #e02454; background: rgba(224,36,84,0.08); color: #e02454; }
+    .batalla-btns { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+    .batalla-main-btn {
+      width: 100%; display: flex; align-items: center; gap: 14px;
+      padding: 16px; border: none; border-radius: 16px;
+      cursor: pointer; text-align: left; font-family: 'Nunito', sans-serif;
+      transition: transform 0.1s; box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+    .batalla-main-btn:active { transform: scale(0.97); }
+    .batalla-primary   { background: linear-gradient(135deg,#e02454,#b91c49); color: white; }
+    .batalla-secondary { background: var(--surface); border: 1.5px solid var(--border); color: var(--text); }
+    .bm-icon  { font-size: 1.8rem; flex-shrink: 0; }
+    .bm-text  { display: flex; flex-direction: column; gap: 2px; }
+    .bm-title { font-size: 1rem; font-weight: 800; }
+    .bm-sub   { font-size: 0.75rem; opacity: 0.8; font-weight: 600; }
+    .label-sm { font-size: 0.72rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  </style>
 </head>
 <body class="lobby-body" data-theme="light">
 
-  <div class="lobby-screen">
+  <!-- ===== VIEW: INICIO ===== -->
+  <div id="view-inicio" class="view active-view">
+    <div class="view-scroll">
 
-    <!-- Header con tema -->
-    <div class="lobby-topbar">
-      <div class="lobby-brand">
-        <div class="brand-logo">X</div>
-        <span class="brand-name">Sudoku X</span>
-      </div>
-      <button class="theme-toggle" id="theme-toggle" title="Cambiar tema">
-        <span id="theme-icon">🌙</span>
-      </button>
-    </div>
-
-    <!-- Hero -->
-    <div class="lobby-hero">
-      <p class="lobby-tagline">Cooperativo · Tiempo real · Diagonales</p>
-    </div>
-
-    <!-- Nombre del jugador -->
-    <div class="lobby-section">
-      <label class="section-label">Tu nombre</label>
-      <input
-        type="text"
-        id="player-name"
-        class="name-input"
-        placeholder="¿Cómo te llamás?"
-        maxlength="14"
-        autocomplete="off"
-        autocorrect="off"
-        spellcheck="false"
-      >
-    </div>
-
-    <!-- Continuar partida (solo si hay guardado) -->
-    <div id="continue-card" class="continue-card hidden">
-      <div class="continue-left">
-        <div class="continue-icon">▶</div>
-        <div class="continue-info">
-          <div class="continue-title">Continuar partida</div>
-          <div id="continue-meta" class="continue-meta"></div>
+      <div class="home-header">
+        <div class="home-brand">
+          <div class="brand-logo-sm">X</div>
+          <span class="brand-title">Sudoku X</span>
+        </div>
+        <div id="streak-badge" class="streak-badge hidden">
+          🔥 <span id="streak-count">0</span>
         </div>
       </div>
-      <button id="btn-continue" class="btn-pill btn-pill-blue">Retomar</button>
-    </div>
 
-    <!-- Dificultad -->
-    <div class="lobby-section">
-      <label class="section-label">Dificultad</label>
-      <div class="diff-selector">
-        <button class="diff-opt" data-diff="easy">
-          <span class="diff-name">Fácil</span>
-          <span class="diff-desc">35 pistas</span>
-        </button>
-        <button class="diff-opt active" data-diff="hard">
-          <span class="diff-name">Difícil</span>
-          <span class="diff-desc">26 pistas</span>
+      <!-- Continuar partida -->
+      <div id="continue-card" class="home-section hidden">
+        <div class="continue-card-home">
+          <div class="continue-card-left">
+            <div class="continue-card-icon">▶</div>
+            <div>
+              <div class="continue-card-title">Continuar partida</div>
+              <div id="continue-meta" class="continue-card-meta"></div>
+            </div>
+          </div>
+          <button id="btn-continue" class="pill-btn pill-blue">Retomar</button>
+        </div>
+      </div>
+
+      <!-- Unirse a sala -->
+      <div class="home-section">
+        <div class="section-title">Unirse a una sala</div>
+        <div class="join-stack">
+          <input
+            type="text" id="room-code-input" class="join-input-home"
+            placeholder="Código  ·  ej: K4M9" maxlength="4"
+            autocomplete="off" autocorrect="off" spellcheck="false"
+          >
+          <button id="btn-join" class="join-btn-full">Unirse →</button>
+        </div>
+      </div>
+
+      <!-- Mi tablero -->
+      <div class="home-section">
+        <div class="section-title">Modo especial</div>
+        <button id="btn-custom" class="custom-card">
+          <span class="custom-card-icon">✎</span>
+          <div class="custom-card-text">
+            <span class="custom-card-title">Mi tablero</span>
+            <span class="custom-card-sub">Cargás los números vos</span>
+          </div>
+          <span class="custom-card-arrow">›</span>
         </button>
       </div>
+
+      <div id="error-message" class="error-msg hidden"></div>
+
     </div>
 
-    <!-- Acciones principales -->
-    <div class="main-actions">
-      <button id="btn-create" class="main-action-btn primary-btn">
-        <span class="action-icon">＋</span>
-        <div class="action-text">
-          <span class="action-title">Nueva sala</span>
-          <span class="action-sub">Tablero aleatorio</span>
+    <div class="nuevo-juego-bar">
+      <button id="btn-nuevo-juego" class="nuevo-juego-btn">＋ Nuevo juego</button>
+    </div>
+  </div>
+
+  <!-- ===== VIEW: BATALLA ===== -->
+  <div id="view-batalla" class="view">
+    <div class="view-scroll">
+      <div class="batalla-content">
+
+        <div class="batalla-logo">⚔️</div>
+        <h1 class="batalla-title">Batalla</h1>
+        <p class="batalla-sub">Competí contra otro jugador en tiempo real</p>
+
+        <div style="width:100%">
+          <div class="label-sm">Dificultad</div>
+          <div class="batalla-diff-pills">
+            <button class="batalla-diff-pill" data-bdiff="easy">Fácil</button>
+            <button class="batalla-diff-pill active" data-bdiff="hard">Difícil</button>
+          </div>
         </div>
-      </button>
-      <button id="btn-custom" class="main-action-btn secondary-btn">
-        <span class="action-icon">✎</span>
-        <div class="action-text">
-          <span class="action-title">Mi tablero</span>
-          <span class="action-sub">Cargás los números</span>
+
+        <div class="batalla-btns">
+          <button id="btn-batalla-find" class="batalla-main-btn batalla-primary">
+            <span class="bm-icon">🌐</span>
+            <div class="bm-text">
+              <span class="bm-title">Buscar partida</span>
+              <span class="bm-sub">Cola global · Aleatorio</span>
+            </div>
+          </button>
+          <button id="btn-batalla-private" class="batalla-main-btn batalla-secondary">
+            <span class="bm-icon">🔒</span>
+            <div class="bm-text">
+              <span class="bm-title">Sala privada</span>
+              <span class="bm-sub">Con código · Para amigos</span>
+            </div>
+          </button>
         </div>
+
+        <div style="width:100%">
+          <div class="label-sm">Unirse con código</div>
+          <div class="join-stack">
+            <input
+              type="text" id="batalla-code-input" class="join-input-home"
+              placeholder="Código · ej: BK4M9" maxlength="5"
+              autocomplete="off" autocorrect="off" spellcheck="false"
+            >
+            <button id="btn-batalla-join" class="join-btn-full">Unirse →</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== VIEW: PERFIL ===== -->
+  <div id="view-perfil" class="view">
+    <div class="view-scroll">
+
+      <div class="profile-header">
+        <div id="profile-avatar" class="profile-avatar">?</div>
+        <div style="flex:1;min-width:0;">
+          <input
+            type="text" id="player-name" class="profile-name-input"
+            placeholder="¿Cómo te llamás?" maxlength="14"
+            autocomplete="off" spellcheck="false"
+          >
+          <div class="profile-sub">Tu nombre de jugador</div>
+        </div>
+      </div>
+
+      <div class="profile-section">
+        <div class="section-title">Estadísticas</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span id="stat-wins" class="stat-val">0</span>
+            <span class="stat-label">Victorias</span>
+          </div>
+          <div class="stat-card">
+            <span id="stat-streak" class="stat-val">0</span>
+            <span class="stat-label">Racha</span>
+          </div>
+          <div class="stat-card">
+            <span id="stat-best" class="stat-val">--:--</span>
+            <span class="stat-label">Mejor tiempo</span>
+          </div>
+          <div class="stat-card">
+            <span id="stat-errors" class="stat-val">0</span>
+            <span class="stat-label">Errores totales</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-section">
+        <div class="section-title">Tema</div>
+        <div class="theme-options">
+          <button class="theme-opt active" data-theme="light">
+            <div class="theme-preview light-preview"></div>
+            Claro
+          </button>
+          <button class="theme-opt" data-theme="dark">
+            <div class="theme-preview dark-preview"></div>
+            Oscuro
+          </button>
+          <button class="theme-opt" data-theme="ocean">
+            <div class="theme-preview ocean-preview"></div>
+            Océano
+          </button>
+        </div>
+      </div>
+
+      <div class="profile-section">
+        <div class="section-title">Historial</div>
+        <div id="history-list" class="history-list">
+          <div class="history-empty">Aún no jugaste ninguna partida</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== BOTTOM NAV ===== -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-tab="inicio">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Inicio</span>
+    </button>
+    <button class="nav-btn" data-tab="batalla">
+      <span class="nav-icon">⚔️</span>
+      <span class="nav-label">Batalla</span>
+    </button>
+    <button class="nav-btn" data-tab="perfil">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Perfil</span>
+    </button>
+  </nav>
+
+  <!-- ===== BOTTOM SHEET — Nuevo Juego ===== -->
+  <div id="nuevo-juego-overlay" class="sheet-overlay hidden"></div>
+  <div id="nuevo-juego-sheet" class="bottom-sheet hidden">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Nuevo juego</div>
+    <div id="sheet-sub" class="sheet-sub">Elegí la dificultad</div>
+    <div class="diff-list">
+      <button class="diff-list-item" data-diff="easy">
+        <span class="diff-emoji">😊</span>
+        <div class="diff-list-info">
+          <span class="diff-list-name">Fácil</span>
+          <span class="diff-list-desc">46 pistas · Ideal para empezar</span>
+        </div>
+        <span class="diff-list-arrow">›</span>
+      </button>
+      <button class="diff-list-item" data-diff="medium">
+        <span class="diff-emoji">🧠</span>
+        <div class="diff-list-info">
+          <span class="diff-list-name">Medio</span>
+          <span class="diff-list-desc">36 pistas · Desafío moderado</span>
+        </div>
+        <span class="diff-list-arrow">›</span>
+      </button>
+      <button class="diff-list-item" data-diff="hard">
+        <span class="diff-emoji">🔥</span>
+        <div class="diff-list-info">
+          <span class="diff-list-name">Difícil</span>
+          <span class="diff-list-desc">26 pistas · Para expertos</span>
+        </div>
+        <span class="diff-list-arrow">›</span>
       </button>
     </div>
-
-    <!-- Divisor -->
-    <div class="or-divider"><span>o unite a una sala</span></div>
-
-    <!-- Unirse — siempre al fondo, grande y cómodo -->
-    <div class="join-section">
-      <input
-        type="text"
-        id="room-code-input"
-        class="join-input"
-        placeholder="Código  ·  ej: K4M9"
-        maxlength="4"
-        autocomplete="off"
-        autocorrect="off"
-        spellcheck="false"
-      >
-      <button id="btn-join" class="join-btn">
-        <span>Unirse</span>
-        <span class="join-arrow">→</span>
-      </button>
-    </div>
-
-    <div id="error-message" class="error-msg hidden"></div>
-
-    <!-- Footer -->
-    <div class="lobby-footer">
-      Sudoku X · Cooperativo multijugador
-    </div>
-
+    <button class="sheet-close-btn" id="btn-sheet-close">Cancelar</button>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="lobby.js"></script>
+  <script>
+    // Cerrar sheet
+    document.getElementById('btn-sheet-close').addEventListener('click', () => {
+      const s = document.getElementById('nuevo-juego-sheet');
+      const o = document.getElementById('nuevo-juego-overlay');
+      s.classList.remove('sheet-open'); o.classList.remove('overlay-open');
+      setTimeout(() => { s.classList.add('hidden'); o.classList.add('hidden'); }, 300);
+    });
+
+    // Batalla: dificultad
+    let batallaDiff = 'hard';
+    document.querySelectorAll('.batalla-diff-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.batalla-diff-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        batallaDiff = btn.dataset.bdiff;
+      });
+    });
+
+    function goToBattle(action, code) {
+      sessionStorage.setItem('battleAction', action);
+      sessionStorage.setItem('battleDiff',   batallaDiff);
+      sessionStorage.setItem('battleName',   localStorage.getItem('playerName') || 'Anónimo');
+      if (code) sessionStorage.setItem('battleCode', code);
+      window.location.href = '/battle.html';
+    }
+
+    document.getElementById('btn-batalla-find').addEventListener('click',    () => goToBattle('find'));
+    document.getElementById('btn-batalla-private').addEventListener('click', () => goToBattle('private'));
+    document.getElementById('btn-batalla-join').addEventListener('click', () => {
+      const code = document.getElementById('batalla-code-input').value.trim().toUpperCase();
+      if (!code) return;
+      goToBattle('join', code);
+    });
+    document.getElementById('batalla-code-input').addEventListener('input', e => {
+      e.target.value = e.target.value.toUpperCase();
+    });
+    document.getElementById('batalla-code-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('btn-batalla-join').click();
+    });
+  </script>
 </body>
 </html>

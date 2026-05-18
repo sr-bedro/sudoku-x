@@ -2,21 +2,64 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="color-scheme" content="light only">
   <title>Sudoku X — Batalla</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <style>
+    html { touch-action: manipulation; overscroll-behavior: none; }
+    body { overflow: hidden; overscroll-behavior: none; touch-action: manipulation; }
+
+    /* Las pantallas de búsqueda/espera tienen nav → reducir altura */
+    .battle-screen-nav {
+      min-height: calc(100dvh - 64px);
+      padding-bottom: 16px;
+    }
+
+    /* Pantalla de juego y resultado: full screen sin nav */
+    #screen-battle, #battle-result {
+      min-height: 100dvh;
+    }
+
+    /* Join stacked en batalla */
+    .join-stack-battle { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+    .join-btn-battle-full {
+      width: 100%; padding: 14px;
+      background: var(--text); color: var(--bg);
+      border: none; border-radius: 13px;
+      font-size: 1rem; font-weight: 800; cursor: pointer;
+      font-family: 'Nunito', sans-serif; box-shadow: var(--shadow);
+      transition: transform 0.1s;
+    }
+    .join-btn-battle-full:active { transform: scale(0.97); }
+
+    /* Nav en batalla */
+    .battle-bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: 64px;
+      background: var(--surface);
+      border-top: 1.5px solid var(--border);
+      display: flex; align-items: center; justify-content: space-around;
+      z-index: 50;
+      padding-bottom: env(safe-area-inset-bottom);
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+    }
+    .battle-bottom-nav.hidden { display: none; }
+
+    /* Botón "Volver" en pantallas de búsqueda: ahora queda arriba */
+    .battle-back-btn { margin-bottom: 16px; }
+  </style>
 </head>
 <body data-theme="light">
 
   <!-- ============================================================
        PANTALLA DE BÚSQUEDA
        ============================================================ -->
-  <div id="screen-search" class="battle-screen">
-    <button class="battle-back-btn" id="btn-back-search">← Volver</button>
+  <div id="screen-search" class="battle-screen battle-screen-nav">
+    <button class="battle-back-btn" id="btn-back-search">← Inicio</button>
 
     <div class="battle-search-content">
       <div class="battle-logo">⚔️</div>
@@ -39,7 +82,6 @@
             <span class="battle-btn-sub">Cola global · Aleatorio</span>
           </div>
         </button>
-
         <button id="btn-private-battle" class="battle-main-btn secondary-battle-btn">
           <span class="battle-btn-icon">🔒</span>
           <div class="battle-btn-text">
@@ -49,21 +91,16 @@
         </button>
       </div>
 
-      <!-- Unirse con código -->
+      <!-- Unirse con código — botón debajo del input -->
       <div class="battle-join-section">
         <div class="section-label">Unirse con código</div>
-        <div class="battle-join-row">
+        <div class="join-stack-battle">
           <input
-            type="text"
-            id="battle-code-input"
-            class="join-input-home"
-            placeholder="Código · ej: BK4M9"
-            maxlength="5"
-            autocomplete="off"
-            autocorrect="off"
-            spellcheck="false"
+            type="text" id="battle-code-input" class="join-input-home"
+            placeholder="Código · ej: BK4M9" maxlength="5"
+            autocomplete="off" autocorrect="off" spellcheck="false"
           >
-          <button id="btn-join-battle" class="join-btn-home">Unirse →</button>
+          <button id="btn-join-battle" class="join-btn-battle-full">Unirse →</button>
         </div>
       </div>
     </div>
@@ -72,7 +109,7 @@
   <!-- ============================================================
        PANTALLA DE ESPERA (matchmaking)
        ============================================================ -->
-  <div id="screen-waiting" class="battle-screen hidden">
+  <div id="screen-waiting" class="battle-screen battle-screen-nav hidden">
     <button class="battle-back-btn" id="btn-cancel-search">✕ Cancelar</button>
 
     <div class="battle-waiting-content">
@@ -102,7 +139,7 @@
   <!-- ============================================================
        PANTALLA DE ESPERA (sala privada creada)
        ============================================================ -->
-  <div id="screen-private-wait" class="battle-screen hidden">
+  <div id="screen-private-wait" class="battle-screen battle-screen-nav hidden">
     <button class="battle-back-btn" id="btn-cancel-private">✕ Cancelar</button>
 
     <div class="battle-waiting-content">
@@ -125,19 +162,16 @@
   </div>
 
   <!-- ============================================================
-       PANTALLA DE JUEGO — BATALLA
+       PANTALLA DE JUEGO — BATALLA (full screen, sin nav)
        ============================================================ -->
   <div id="screen-battle" class="battle-screen hidden">
 
-    <!-- Header de batalla -->
     <div class="battle-header">
       <button class="icon-btn" id="btn-home-battle">🏠</button>
-
       <div class="battle-timer-block">
         <div id="battle-timer" class="battle-timer">00:00</div>
         <div id="battle-penalty" class="battle-penalty hidden">+<span id="penalty-secs">0</span>s</div>
       </div>
-
       <div class="battle-header-right">
         <div class="battle-errors-display">
           <span id="battle-error-dot-1" class="error-dot">●</span>
@@ -147,7 +181,6 @@
       </div>
     </div>
 
-    <!-- Barra de progreso — vos vs oponente -->
     <div class="battle-progress-bar-section">
       <div class="battle-progress-row">
         <span class="progress-label you-label" id="your-progress-name">Vos</span>
@@ -165,10 +198,8 @@
       </div>
     </div>
 
-    <!-- Tablero -->
     <div id="battle-board" class="board"></div>
 
-    <!-- Toolbar batalla -->
     <div class="toolbar">
       <button class="tool-btn" id="battle-btn-undo">
         <span class="tool-icon">↩</span>
@@ -184,7 +215,6 @@
       </button>
     </div>
 
-    <!-- Numpad -->
     <div class="numpad" id="battle-numpad">
       <button class="num-btn" data-num="1"><span class="num-val">1</span><span class="num-count"></span></button>
       <button class="num-btn" data-num="2"><span class="num-val">2</span><span class="num-count"></span></button>
@@ -200,7 +230,7 @@
   </div>
 
   <!-- ============================================================
-       RESULTADO FINAL
+       RESULTADO FINAL (full screen, sin nav)
        ============================================================ -->
   <div id="battle-result" class="battle-result hidden">
     <canvas id="battle-confetti"></canvas>
@@ -235,8 +265,84 @@
 
   <div id="battle-toast" class="save-toast hidden"></div>
 
+  <!-- ============================================================
+       BOTTOM NAV persistente (se oculta durante el juego)
+       ============================================================ -->
+  <nav id="battle-nav" class="battle-bottom-nav">
+    <button class="nav-btn" onclick="window.location.href='/'">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Inicio</span>
+    </button>
+    <button class="nav-btn active">
+      <span class="nav-icon">⚔️</span>
+      <span class="nav-label">Batalla</span>
+    </button>
+    <button class="nav-btn" onclick="window.location.href='/?tab=perfil'">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Perfil</span>
+    </button>
+  </nav>
+
   <script src="/socket.io/socket.io.js"></script>
   <script src="sounds.js"></script>
   <script src="battle.js"></script>
+  <script>
+    // Aplicar tema guardado
+    const theme = localStorage.getItem('theme') || 'light';
+    document.body.dataset.theme = theme;
+
+    // Leer acción desde sessionStorage (viene de index.html)
+    const battleAction = sessionStorage.getItem('battleAction');
+    const battleDiff   = sessionStorage.getItem('battleDiff') || 'hard';
+    const battleName   = sessionStorage.getItem('battleName') || 'Anónimo';
+    const battleCode   = sessionStorage.getItem('battleCode') || '';
+    sessionStorage.removeItem('battleAction');
+    sessionStorage.removeItem('battleCode');
+
+    // Marcar dificultad activa
+    if (battleDiff) {
+      document.querySelectorAll('.battle-diff-pill').forEach(p => {
+        p.classList.toggle('active', p.dataset.diff === battleDiff);
+      });
+    }
+
+    // Auto-lanzar la acción si viene de index
+    if (battleAction && typeof socket !== 'undefined') {
+      // Esperar a que battle.js conecte el socket
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          if (battleAction === 'find') {
+            document.getElementById('btn-find-match')?.click();
+          } else if (battleAction === 'private') {
+            document.getElementById('btn-private-battle')?.click();
+          } else if (battleAction === 'join' && battleCode) {
+            const inp = document.getElementById('battle-code-input');
+            if (inp) inp.value = battleCode;
+            document.getElementById('btn-join-battle')?.click();
+          }
+        }, 300);
+      });
+    }
+
+    // Ocultar/mostrar nav según pantalla activa
+    function updateNav() {
+      const nav = document.getElementById('battle-nav');
+      const gameVisible   = !document.getElementById('screen-battle').classList.contains('hidden');
+      const resultVisible = !document.getElementById('battle-result').classList.contains('hidden');
+      nav.classList.toggle('hidden', gameVisible || resultVisible);
+    }
+
+    // Observar cambios de clase en las pantallas
+    const observer = new MutationObserver(updateNav);
+    ['screen-battle','battle-result'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el, { attributes: true, attributeFilter: ['class'] });
+    });
+
+    // Botón "← Inicio"
+    document.getElementById('btn-back-search').addEventListener('click', () => {
+      window.location.href = '/';
+    });
+  </script>
 </body>
 </html>

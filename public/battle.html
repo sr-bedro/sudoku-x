@@ -10,33 +10,19 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <style>
+    /* ── Base ── */
     html { touch-action: manipulation; overscroll-behavior: none; }
     body { overflow: hidden; overscroll-behavior: none; touch-action: manipulation; }
 
-    /* Las pantallas de búsqueda/espera tienen nav → reducir altura */
+    /* ── Pantallas con nav ── */
     .battle-screen-nav {
       min-height: calc(100dvh - 64px);
-      padding-bottom: 16px;
+      padding-bottom: 8px;
+      box-sizing: border-box;
     }
+    #screen-battle, #battle-result { min-height: 100dvh; }
 
-    /* Pantalla de juego y resultado: full screen sin nav */
-    #screen-battle, #battle-result {
-      min-height: 100dvh;
-    }
-
-    /* Join stacked en batalla */
-    .join-stack-battle { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
-    .join-btn-battle-full {
-      width: 100%; padding: 14px;
-      background: var(--text); color: var(--bg);
-      border: none; border-radius: 13px;
-      font-size: 1rem; font-weight: 800; cursor: pointer;
-      font-family: 'Nunito', sans-serif; box-shadow: var(--shadow);
-      transition: transform 0.1s;
-    }
-    .join-btn-battle-full:active { transform: scale(0.97); }
-
-    /* Nav en batalla */
+    /* ── Bottom nav ── */
     .battle-bottom-nav {
       position: fixed; bottom: 0; left: 0; right: 0;
       height: 64px;
@@ -49,18 +35,120 @@
     }
     .battle-bottom-nav.hidden { display: none; }
 
-    /* Botón "Volver" en pantallas de búsqueda: ahora queda arriba */
-    .battle-back-btn { margin-bottom: 16px; }
+    /* ── Dificultad: 5 pills ── */
+    .battle-diff-pills {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      justify-content: center;
+    }
+    .battle-diff-pill {
+      padding: 8px 14px;
+      background: var(--surface); border: 2px solid var(--border);
+      border-radius: 20px; font-size: 0.82rem; font-weight: 800;
+      color: var(--text-dim); cursor: pointer;
+      font-family: 'Nunito', sans-serif; transition: all 0.15s;
+    }
+    .battle-diff-pill.active {
+      border-color: #e02454;
+      background: rgba(224,36,84,0.1);
+      color: #e02454;
+    }
+
+    /* ── Progreso: dos barras separadas ── */
+    .battle-progress-section {
+      padding: 10px 16px 6px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .progress-player-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+    }
+    .progress-player-row:last-child { margin-bottom: 0; }
+    .pl-name {
+      font-size: 0.72rem; font-weight: 800;
+      width: 56px; flex-shrink: 0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .pl-name.you-name  { color: #e02454; }
+    .pl-name.opp-name  { color: #f59e0b; }
+    .pl-track {
+      flex: 1; height: 9px;
+      background: var(--border); border-radius: 5px; overflow: hidden;
+    }
+    .pl-fill {
+      height: 100%; border-radius: 5px;
+      transition: width 0.35s cubic-bezier(.4,0,.2,1);
+      width: 0%;
+    }
+    .you-fill { background: linear-gradient(90deg, #e02454, #ff6b8a); }
+    .opp-fill { background: linear-gradient(90deg, #f59e0b, #fcd34d); }
+    .pl-count {
+      font-size: 0.72rem; font-weight: 800;
+      width: 38px; text-align: right; color: var(--text-dim); flex-shrink: 0;
+    }
+
+    /* ── Header de batalla ── */
+    .battle-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px 6px;
+    }
+    .battle-timer {
+      font-size: 1.4rem; font-weight: 900; letter-spacing: 2px;
+      color: var(--text);
+    }
+    .battle-header-right {
+      display: flex; align-items: center; gap: 6px;
+    }
+    .my-errors-badge {
+      font-size: 0.8rem; font-weight: 800;
+      color: #ef4444; background: rgba(239,68,68,0.1);
+      border-radius: 20px; padding: 4px 10px;
+      min-width: 36px; text-align: center;
+    }
+
+    /* ── Animaciones ── */
+    @keyframes cellCorrect {
+      0%   { transform: scale(1); }
+      35%  { transform: scale(1.18); }
+      65%  { transform: scale(0.95); }
+      100% { transform: scale(1); }
+    }
+    @keyframes cellErrorShake {
+      0%   { transform: translateX(0); }
+      20%  { transform: translateX(-5px); }
+      40%  { transform: translateX(5px); }
+      60%  { transform: translateX(-4px); }
+      80%  { transform: translateX(4px); }
+      100% { transform: translateX(0); }
+    }
+    .cell.correct-flash { animation: cellCorrect 0.45s ease; }
+    .cell.error-shake   { animation: cellErrorShake 0.35s ease; }
+
+    /* ── Nota mode: color de notas ── */
+    .board.note-mode .notes-grid .note-num { color: #7c3aed; font-weight: 800; }
+    .num-btn.note-mode .num-val { color: #7c3aed; }
+
+    /* ── Join stacked ── */
+    .join-stack-battle { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+    .join-btn-battle-full {
+      width: 100%; padding: 14px;
+      background: var(--text); color: var(--bg);
+      border: none; border-radius: 13px;
+      font-size: 1rem; font-weight: 800; cursor: pointer;
+      font-family: 'Nunito', sans-serif;
+      transition: transform 0.1s;
+    }
+    .join-btn-battle-full:active { transform: scale(0.97); }
   </style>
 </head>
 <body data-theme="light">
+
+  <!-- Botón oculto — necesario para compatibilidad con cualquier referencia en battle.js -->
+  <button id="btn-back-search" style="display:none"></button>
 
   <!-- ============================================================
        PANTALLA DE BÚSQUEDA
        ============================================================ -->
   <div id="screen-search" class="battle-screen battle-screen-nav">
-    <button class="battle-back-btn" id="btn-back-search">← Inicio</button>
-
     <div class="battle-search-content">
       <div class="battle-logo">⚔️</div>
       <h1 class="battle-title">Batalla</h1>
@@ -70,7 +158,10 @@
         <div class="section-label">Dificultad</div>
         <div class="battle-diff-pills">
           <button class="battle-diff-pill" data-diff="easy">Fácil</button>
+          <button class="battle-diff-pill" data-diff="normal">Normal</button>
           <button class="battle-diff-pill active" data-diff="hard">Difícil</button>
+          <button class="battle-diff-pill" data-diff="expert">Experto</button>
+          <button class="battle-diff-pill" data-diff="extreme">Extremo</button>
         </div>
       </div>
 
@@ -86,22 +177,9 @@
           <span class="battle-btn-icon">🔒</span>
           <div class="battle-btn-text">
             <span class="battle-btn-title">Sala privada</span>
-            <span class="battle-btn-sub">Con código · Para amigos</span>
+            <span class="battle-btn-sub">Creá o unite con código</span>
           </div>
         </button>
-      </div>
-
-      <!-- Unirse con código — botón debajo del input -->
-      <div class="battle-join-section">
-        <div class="section-label">Unirse con código</div>
-        <div class="join-stack-battle">
-          <input
-            type="text" id="battle-code-input" class="join-input-home"
-            placeholder="Código · ej: BK4M9" maxlength="5"
-            autocomplete="off" autocorrect="off" spellcheck="false"
-          >
-          <button id="btn-join-battle" class="join-btn-battle-full">Unirse →</button>
-        </div>
       </div>
     </div>
   </div>
@@ -111,11 +189,9 @@
        ============================================================ -->
   <div id="screen-waiting" class="battle-screen battle-screen-nav hidden">
     <button class="battle-back-btn" id="btn-cancel-search">✕ Cancelar</button>
-
     <div class="battle-waiting-content">
       <div class="battle-logo">🔍</div>
       <h2 class="battle-waiting-title">Buscando oponente...</h2>
-
       <div class="matchmaking-animation">
         <div class="mm-player mm-you">
           <div class="mm-avatar you-avatar" id="mm-your-avatar">?</div>
@@ -124,15 +200,41 @@
         <div class="mm-vs">VS</div>
         <div class="mm-player mm-opp">
           <div class="mm-avatar opp-avatar-loading">
-            <div class="mm-searching-dots">
-              <span></span><span></span><span></span>
-            </div>
+            <div class="mm-searching-dots"><span></span><span></span><span></span></div>
           </div>
           <span class="mm-name">Buscando...</span>
         </div>
       </div>
-
       <p class="waiting-hint">Mientras tanto podés practicar en modo normal</p>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       PANTALLA — SALA PRIVADA (crear o unirse)
+       ============================================================ -->
+  <div id="screen-private-options" class="battle-screen battle-screen-nav hidden">
+    <button class="battle-back-btn" id="btn-back-private-options">← Volver</button>
+    <div class="battle-waiting-content">
+      <div class="battle-logo">🔒</div>
+      <h2 class="battle-waiting-title">Sala privada</h2>
+      <div class="battle-actions" style="margin-top:20px;">
+        <button id="btn-create-private" class="battle-main-btn primary-battle-btn">
+          <span class="battle-btn-icon">＋</span>
+          <div class="battle-btn-text">
+            <span class="battle-btn-title">Crear sala</span>
+            <span class="battle-btn-sub">Compartí el código con tu amigo</span>
+          </div>
+        </button>
+      </div>
+      <div style="width:100%; margin-top:20px;">
+        <div class="section-label">Unirse con código</div>
+        <div class="join-stack-battle">
+          <input type="text" id="battle-code-input" class="join-input-home"
+            placeholder="Código · ej: BK4M" maxlength="5"
+            autocomplete="off" autocorrect="off" spellcheck="false">
+          <button id="btn-join-battle" class="join-btn-battle-full">Unirse →</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -141,65 +243,56 @@
        ============================================================ -->
   <div id="screen-private-wait" class="battle-screen battle-screen-nav hidden">
     <button class="battle-back-btn" id="btn-cancel-private">✕ Cancelar</button>
-
     <div class="battle-waiting-content">
       <div class="battle-logo">🔒</div>
-      <h2 class="battle-waiting-title">Sala privada creada</h2>
+      <h2 class="battle-waiting-title">Sala creada</h2>
       <p class="battle-subtitle">Compartí el código con tu oponente</p>
-
       <div class="private-code-display" id="private-code-display">-----</div>
-
-      <div class="share-actions" style="margin-top: 20px;">
+      <div class="share-actions" style="margin-top:20px;">
         <button id="private-share-wa" class="share-btn-wa">💬 Compartir por WhatsApp</button>
         <button id="private-copy-code" class="share-btn-copy">📋 Copiar código</button>
       </div>
-
-      <div class="waiting-dots-row">
-        <span></span><span></span><span></span>
-      </div>
+      <div class="waiting-dots-row"><span></span><span></span><span></span></div>
       <p class="waiting-hint">Esperando que se una tu oponente...</p>
     </div>
   </div>
 
   <!-- ============================================================
-       PANTALLA DE JUEGO — BATALLA (full screen, sin nav)
+       PANTALLA DE JUEGO — full screen sin nav
        ============================================================ -->
   <div id="screen-battle" class="battle-screen hidden">
 
+    <!-- Header -->
     <div class="battle-header">
       <button class="icon-btn" id="btn-home-battle">🏠</button>
-      <div class="battle-timer-block">
-        <div id="battle-timer" class="battle-timer">00:00</div>
-        <div id="battle-penalty" class="battle-penalty hidden">+<span id="penalty-secs">0</span>s</div>
-      </div>
+      <div id="battle-timer" class="battle-timer">00:00</div>
       <div class="battle-header-right">
-        <div class="battle-errors-display">
-          <span id="battle-error-dot-1" class="error-dot">●</span>
-          <span id="battle-error-dot-2" class="error-dot">●</span>
-          <span id="battle-error-dot-3" class="error-dot">●</span>
-        </div>
+        <div class="my-errors-badge">✕ <span id="my-errors-count">0</span></div>
       </div>
     </div>
 
-    <div class="battle-progress-bar-section">
-      <div class="battle-progress-row">
-        <span class="progress-label you-label" id="your-progress-name">Vos</span>
-        <div class="progress-track">
-          <div class="progress-fill your-fill" id="your-progress-fill"></div>
-          <div class="progress-fill opp-fill" id="opp-progress-fill"></div>
+    <!-- Barras de progreso: dos separadas -->
+    <div class="battle-progress-section">
+      <div class="progress-player-row">
+        <span class="pl-name you-name" id="your-progress-name">Vos</span>
+        <div class="pl-track">
+          <div class="pl-fill you-fill" id="your-progress-fill"></div>
         </div>
-        <span class="progress-label opp-label" id="opp-progress-name">Oponente</span>
+        <span class="pl-count" id="your-cells-count">0/0</span>
       </div>
-      <div class="battle-progress-nums">
-        <span id="your-cells-count">0</span>
-        <span class="progress-total" id="total-cells-display">/ 0</span>
-        <span class="progress-sep">·</span>
-        <span class="progress-total" id="opp-cells-display">0</span>
+      <div class="progress-player-row">
+        <span class="pl-name opp-name" id="opp-progress-name">Rival</span>
+        <div class="pl-track">
+          <div class="pl-fill opp-fill" id="opp-progress-fill"></div>
+        </div>
+        <span class="pl-count" id="opp-cells-display">0/0</span>
       </div>
     </div>
 
+    <!-- Tablero -->
     <div id="battle-board" class="board"></div>
 
+    <!-- Toolbar -->
     <div class="toolbar">
       <button class="tool-btn" id="battle-btn-undo">
         <span class="tool-icon">↩</span>
@@ -215,6 +308,7 @@
       </button>
     </div>
 
+    <!-- Numpad -->
     <div class="numpad" id="battle-numpad">
       <button class="num-btn" data-num="1"><span class="num-val">1</span><span class="num-count"></span></button>
       <button class="num-btn" data-num="2"><span class="num-val">2</span><span class="num-count"></span></button>
@@ -226,11 +320,10 @@
       <button class="num-btn" data-num="8"><span class="num-val">8</span><span class="num-count"></span></button>
       <button class="num-btn" data-num="9"><span class="num-val">9</span><span class="num-count"></span></button>
     </div>
-
   </div>
 
   <!-- ============================================================
-       RESULTADO FINAL (full screen, sin nav)
+       RESULTADO FINAL — full screen sin nav
        ============================================================ -->
   <div id="battle-result" class="battle-result hidden">
     <canvas id="battle-confetti"></canvas>
@@ -238,7 +331,6 @@
       <div id="result-emoji" class="result-emoji">🏆</div>
       <h2 id="result-title">¡Ganaste!</h2>
       <p id="result-subtitle" class="result-sub"></p>
-
       <div class="result-stats">
         <div class="result-stat">
           <span class="result-stat-val" id="result-time">--:--</span>
@@ -249,15 +341,14 @@
           <span class="result-stat-val" id="result-errors">0</span>
           <span class="result-stat-label">Errores</span>
         </div>
-        <div class="win-stat-divider"></div>
-        <div class="result-stat">
+        <!-- Penalización oculta (ya no se usa) -->
+        <div class="result-stat" style="display:none">
           <span class="result-stat-val" id="result-penalty">+0s</span>
           <span class="result-stat-label">Penalización</span>
         </div>
       </div>
-
       <div class="result-actions">
-        <button id="btn-rematch" class="result-btn primary-battle-btn">Revancha</button>
+        <button id="btn-rematch" class="result-btn primary-battle-btn">Revancha ⚔️</button>
         <button id="btn-back-home" class="result-btn result-btn-secondary">Volver al inicio</button>
       </div>
     </div>
@@ -266,10 +357,10 @@
   <div id="battle-toast" class="save-toast hidden"></div>
 
   <!-- ============================================================
-       BOTTOM NAV persistente (se oculta durante el juego)
+       BOTTOM NAV — se oculta durante juego y resultado
        ============================================================ -->
   <nav id="battle-nav" class="battle-bottom-nav">
-    <button class="nav-btn" onclick="window.location.href='/'">
+    <button class="nav-btn" id="nav-inicio-btn">
       <span class="nav-icon">🏠</span>
       <span class="nav-label">Inicio</span>
     </button>
@@ -277,7 +368,7 @@
       <span class="nav-icon">⚔️</span>
       <span class="nav-label">Batalla</span>
     </button>
-    <button class="nav-btn" onclick="window.location.href='/?tab=perfil'">
+    <button class="nav-btn" id="nav-perfil-btn">
       <span class="nav-icon">👤</span>
       <span class="nav-label">Perfil</span>
     </button>
@@ -287,62 +378,54 @@
   <script src="sounds.js"></script>
   <script src="battle.js"></script>
   <script>
-    // Aplicar tema guardado
-    const theme = localStorage.getItem('theme') || 'light';
-    document.body.dataset.theme = theme;
+    // Tema guardado
+    document.body.dataset.theme = localStorage.getItem('theme') || 'light';
 
-    // Leer acción desde sessionStorage (viene de index.html)
-    const battleAction = sessionStorage.getItem('battleAction');
-    const battleDiff   = sessionStorage.getItem('battleDiff') || 'hard';
-    const battleName   = sessionStorage.getItem('battleName') || 'Anónimo';
-    const battleCode   = sessionStorage.getItem('battleCode') || '';
-    sessionStorage.removeItem('battleAction');
-    sessionStorage.removeItem('battleCode');
+    // Nav: Inicio y Perfil
+    document.getElementById('nav-inicio-btn').addEventListener('click', () => { window.location.href = '/'; });
+    document.getElementById('nav-perfil-btn').addEventListener('click', () => { window.location.href = '/?tab=perfil'; });
 
-    // Marcar dificultad activa
-    if (battleDiff) {
-      document.querySelectorAll('.battle-diff-pill').forEach(p => {
-        p.classList.toggle('active', p.dataset.diff === battleDiff);
-      });
+    // Ocultar nav durante juego y resultado
+    const battleNav = document.getElementById('battle-nav');
+    function updateBattleNav() {
+      const gameOn   = !document.getElementById('screen-battle').classList.contains('hidden');
+      const resultOn = !document.getElementById('battle-result').classList.contains('hidden');
+      battleNav.classList.toggle('hidden', gameOn || resultOn);
     }
-
-    // Auto-lanzar la acción si viene de index
-    if (battleAction && typeof socket !== 'undefined') {
-      // Esperar a que battle.js conecte el socket
-      window.addEventListener('load', () => {
-        setTimeout(() => {
-          if (battleAction === 'find') {
-            document.getElementById('btn-find-match')?.click();
-          } else if (battleAction === 'private') {
-            document.getElementById('btn-private-battle')?.click();
-          } else if (battleAction === 'join' && battleCode) {
-            const inp = document.getElementById('battle-code-input');
-            if (inp) inp.value = battleCode;
-            document.getElementById('btn-join-battle')?.click();
-          }
-        }, 300);
-      });
-    }
-
-    // Ocultar/mostrar nav según pantalla activa
-    function updateNav() {
-      const nav = document.getElementById('battle-nav');
-      const gameVisible   = !document.getElementById('screen-battle').classList.contains('hidden');
-      const resultVisible = !document.getElementById('battle-result').classList.contains('hidden');
-      nav.classList.toggle('hidden', gameVisible || resultVisible);
-    }
-
-    // Observar cambios de clase en las pantallas
-    const observer = new MutationObserver(updateNav);
+    const mo = new MutationObserver(updateBattleNav);
     ['screen-battle','battle-result'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el, { attributes: true, attributeFilter: ['class'] });
+      mo.observe(document.getElementById(id), { attributes: true, attributeFilter: ['class'] });
     });
 
-    // Botón "← Inicio"
-    document.getElementById('btn-back-search').addEventListener('click', () => {
-      window.location.href = '/';
-    });
+    // Opp progress count: mostrar /total también
+    const origUpdateOpp = window.updateOppProgress;
+
+    // Acción desde sessionStorage (viene de index.html)
+    const action   = sessionStorage.getItem('battleAction');
+    const bDiff    = sessionStorage.getItem('battleDiff') || 'hard';
+    sessionStorage.removeItem('battleAction');
+
+    if (bDiff) {
+      document.querySelectorAll('.battle-diff-pill').forEach(p => {
+        p.classList.toggle('active', p.dataset.diff === bDiff);
+      });
+    }
+
+    if (action === 'find') {
+      setTimeout(() => document.getElementById('btn-find-match')?.click(), 350);
+    } else if (action === 'private') {
+      setTimeout(() => document.getElementById('btn-private-battle')?.click(), 350);
+    } else if (action === 'join') {
+      const code = sessionStorage.getItem('battleCode') || '';
+      sessionStorage.removeItem('battleCode');
+      setTimeout(() => {
+        document.getElementById('btn-private-battle')?.click();
+        setTimeout(() => {
+          const inp = document.getElementById('battle-code-input');
+          if (inp && code) { inp.value = code; document.getElementById('btn-join-battle')?.click(); }
+        }, 200);
+      }, 350);
+    }
   </script>
 </body>
 </html>

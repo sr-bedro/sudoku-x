@@ -1,196 +1,237 @@
 // ============================================================
-// BATALLA — Cliente
+// BATTLE.JS — Lógica completa de modo batalla
 // ============================================================
 
-const socket     = io();
-const playerName = localStorage.getItem('playerName') || 'Anónimo';
-const theme      = localStorage.getItem('theme') || 'light';
+const socket = io();
 
-document.body.dataset.theme = theme;
-
-// ============================================================
-// ESTADO
-// ============================================================
-let battleCode     = null;
-let playerIndex    = -1;
-let board          = null;
-let solution       = null;
-let selectedRow    = -1;
-let selectedCol    = -1;
-let noteMode       = false;
-let myErrors       = 0;
-let myPenalty      = 0;
+// ── Estado ──
+let board         = null;
+let solution      = null;
+let playerIndex   = -1;
 let myCorrectCells = 0;
-let totalCells     = 0;
-let oppCorrect     = 0;
-let timerInterval  = null;
-let startTime      = null;
-let undoStack      = [];
-let selectedDiff   = 'hard';
-let soundEnabled   = localStorage.getItem('soundEnabled') !== 'false';
+let oppCorrectCells = 0;
+let totalCells    = 0;
+let myErrors      = 0;
+let selectedRow   = -1;
+let selectedCol   = -1;
+let noteMode      = false;
+let timerInterval = null;
+let startTime     = null;
+let gameActive    = false;
+let battleCode    = null;
+let opponentName  = 'Oponente';
+let playerName    = localStorage.getItem('playerName') || 'Anónimo';
+let currentDiff   = localStorage.getItem('battleDiff') || 'hard';
+const undoStack   = [];
 
-// ============================================================
-// PANTALLAS
-// ============================================================
+const MY_COLOR  = '#e02454';  // jugador 0
+const OPP_COLOR = '#f59e0b';  // jugador 1
+const MY_COLORS = [MY_COLOR, OPP_COLOR]; // indexed by playerIndex
+
+// ── DOM: pantallas ──
 const screens = {
   search:      document.getElementById('screen-search'),
   waiting:     document.getElementById('screen-waiting'),
+  privateOpts: document.getElementById('screen-private-options'),
   privateWait: document.getElementById('screen-private-wait'),
   battle:      document.getElementById('screen-battle'),
+  result:      document.getElementById('battle-result'),
 };
 
 function showScreen(name) {
-  Object.values(screens).forEach(s => s.classList.add('hidden'));
+  Object.values(screens).forEach(s => s && s.classList.add('hidden'));
   if (screens[name]) screens[name].classList.remove('hidden');
 }
 
-showScreen('search');
+// ── DOM: tablero y controles ──
+const boardEl         = document.getElementById('battle-board');
+const timerEl         = document.getElementById('battle-timer');
+const yourFill        = document.getElementById('your-progress-fill');
+const oppFill         = document.getElementById('opp-progress-fill');
+const yourCount       = document.getElementById('your-cells-count');
+const oppCountEl      = document.getElementById('opp-cells-display');
+const yourNameEl      = document.getElementById('your-progress-name');
+const oppNameEl       = document.getElementById('opp-progress-name');
+const totalEl         = document.getElementById('total-cells-display');
+const myErrorsEl      = document.getElementById('my-errors-count');
+const numBtns         = document.querySelectorAll('#battle-numpad .num-btn');
+const btnUndo         = document.getElementById('battle-btn-undo');
+const btnErase        = document.getElementById('battle-btn-erase');
+const btnNote         = document.getElementById('battle-btn-note');
+const toast           = document.getElementById('battle-toast');
+const mmYourAvatar    = document.getElementById('mm-your-avatar');
+const mmYourName      = document.getElementById('mm-your-name');
+const privateCodeDisp = document.getElementById('private-code-display');
 
-// ============================================================
-// DIFICULTAD
-// ============================================================
+// ── Helpers ──
+function getBattleCellEl(r, c) {
+  return boardEl?.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+}
+
+function formatTime(s) {
+  return `${String(Math.floor(s / 60)).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
+}
+
+function showToast(msg, duration = 2500) {
+  if (!toast) return;
+  toast.textContent = msg;
+  toast.classList.remove('hidden');
+  setTimeout(() => toast.classList.add('hidden'), duration);
+}
+
+function playSound(fn) {
+  try { fn && fn(); } catch(e) {}
+}
+
+// ── Dificultad ──
 document.querySelectorAll('.battle-diff-pill').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.battle-diff-pill').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    selectedDiff = btn.dataset.diff;
+    currentDiff = btn.dataset.diff;
+    localStorage.setItem('battleDiff', currentDiff);
   });
+  if (btn.dataset.diff === currentDiff) {
+    document.querySelectorAll('.battle-diff-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
 });
 
-// ============================================================
-// DOM — BÚSQUEDA
-// ============================================================
-document.getElementById('btn-back-search').addEventListener('click', () => {
-  window.location.href = '/';
-});
-
-document.getElementById('btn-find-match').addEventListener('click', () => {
+// ── Matchmaking: Buscar partida ──
+const btnFind = document.getElementById('btn-find-match');
+btnFind && btnFind.addEventListener('click', () => {
+  socket.emit('battle-find-match', { playerName, difficulty: currentDiff });
+  if (mmYourAvatar) mmYourAvatar.textContent = playerName[0]?.toUpperCase() || '?';
+  if (mmYourName)   mmYourName.textContent   = playerName;
   showScreen('waiting');
-  const av = document.getElementById('mm-your-avatar');
-  const nm = document.getElementById('mm-your-name');
-  if (av) av.textContent = playerName[0]?.toUpperCase() || '?';
-  if (nm) nm.textContent = playerName;
-  socket.emit('battle-find-match', { playerName, difficulty: selectedDiff });
 });
 
-document.getElementById('btn-cancel-search').addEventListener('click', () => {
-  socket.emit('battle-cancel-search');
-  showScreen('search');
-});
+// ── Cancelar búsqueda ──
+document.getElementById('btn-cancel-search') &&
+  document.getElementById('btn-cancel-search').addEventListener('click', () => {
+    socket.emit('battle-cancel-search');
+    showScreen('search');
+  });
 
-document.getElementById('btn-private-battle').addEventListener('click', () => {
-  socket.emit('battle-create-private', { playerName, difficulty: selectedDiff });
-});
+// ── Sala privada: botón principal ──
+const btnPrivate = document.getElementById('btn-private-battle');
+btnPrivate && btnPrivate.addEventListener('click', () => showScreen('privateOpts'));
 
-document.getElementById('btn-join-battle').addEventListener('click', () => {
-  const code = document.getElementById('battle-code-input').value.trim().toUpperCase();
-  if (!code) { showToast('Ingresá un código'); return; }
-  socket.emit('battle-join-private', { code, playerName });
-});
+// ── Sala privada: volver ──
+document.getElementById('btn-back-private-options') &&
+  document.getElementById('btn-back-private-options').addEventListener('click', () => showScreen('search'));
 
-document.getElementById('battle-code-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('btn-join-battle').click();
-});
+// ── Sala privada: crear ──
+document.getElementById('btn-create-private') &&
+  document.getElementById('btn-create-private').addEventListener('click', () => {
+    socket.emit('battle-create-private', { playerName, difficulty: currentDiff });
+  });
 
-document.getElementById('battle-code-input').addEventListener('input', e => {
+// ── Sala privada: unirse ──
+const battleCodeInput = document.getElementById('battle-code-input');
+const btnJoinBattle   = document.getElementById('btn-join-battle');
+
+battleCodeInput && battleCodeInput.addEventListener('input', e => {
   e.target.value = e.target.value.toUpperCase();
 });
 
-// ============================================================
-// DOM — SALA PRIVADA CREADA
-// ============================================================
-document.getElementById('btn-cancel-private').addEventListener('click', () => {
-  showScreen('search');
+btnJoinBattle && btnJoinBattle.addEventListener('click', () => {
+  const code = battleCodeInput?.value.trim().toUpperCase();
+  if (!code) return;
+  socket.emit('battle-join-private', { code, playerName });
 });
 
-document.getElementById('private-share-wa').addEventListener('click', () => {
-  const code = document.getElementById('private-code-display').textContent;
-  const msg  = `¡Te desafío a un Sudoku X Batalla! ⚔️\nCódigo: *${code}*\n\n1. Entrá a: ${window.location.origin}\n2. Tab "Batalla"\n3. Ingresá el código: *${code}*`;
-  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+battleCodeInput && battleCodeInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') btnJoinBattle?.click();
 });
 
-document.getElementById('private-copy-code').addEventListener('click', () => {
-  const code = document.getElementById('private-code-display').textContent;
-  navigator.clipboard.writeText(code).then(() => showToast('Código copiado'));
-});
-
-// ============================================================
-// DOM — JUEGO BATALLA
-// ============================================================
-document.getElementById('btn-home-battle').addEventListener('click', () => {
-  if (!confirm('¿Salir de la batalla? Perderás la partida.')) return;
-  stopTimer();
-  window.location.href = '/';
-});
-
-document.getElementById('battle-btn-note').addEventListener('click', () => {
-  noteMode = !noteMode;
-  document.getElementById('battle-btn-note').classList.toggle('active', noteMode);
-  document.querySelectorAll('#battle-numpad .num-btn').forEach(b => b.classList.toggle('note-mode', noteMode));
-});
-
-document.getElementById('battle-btn-erase').addEventListener('click', () => {
-  if (selectedRow === -1 || !board) return;
-  if (board[selectedRow][selectedCol].fixed) return;
-  socket.emit('battle-move', { row: selectedRow, col: selectedCol, value: 0 });
-});
-
-document.getElementById('battle-btn-undo').addEventListener('click', () => {
-  if (!undoStack.length) return;
-  const last = undoStack.pop();
-  board[last.row][last.col].value = last.prevValue;
-  const el = getBattleCellEl(last.row, last.col);
-  if (el) {
-    el.textContent = last.prevValue || '';
-    el.classList.remove('battle-correct', 'battle-error');
-    if (last.prevValue && last.prevValue === solution[last.row][last.col]) {
-      el.classList.add('battle-correct');
-    }
-  }
-  updateBattleNumpadCounts();
-});
-
-document.querySelectorAll('#battle-numpad .num-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    if (selectedRow === -1 || !board) return;
-    const value = parseInt(btn.dataset.num);
-    if (noteMode) {
-      // Notas en batalla: solo local, sin sincronizar
-      handleBattleNote(selectedRow, selectedCol, value);
-    } else {
-      socket.emit('battle-move', { row: selectedRow, col: selectedCol, value });
-    }
+// ── Sala privada: cancelar espera ──
+document.getElementById('btn-cancel-private') &&
+  document.getElementById('btn-cancel-private').addEventListener('click', () => {
+    socket.emit('battle-cancel-search');
+    showScreen('search');
   });
+
+// ── Sala privada: compartir código ──
+document.getElementById('private-share-wa') &&
+  document.getElementById('private-share-wa').addEventListener('click', () => {
+    const code = privateCodeDisp?.textContent;
+    const msg  = `¡Te desafío a una batalla de Sudoku X! ⚔️\nCódigo: *${code}*\nEntrá a: ${window.location.origin}/battle.html`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+  });
+
+document.getElementById('private-copy-code') &&
+  document.getElementById('private-copy-code').addEventListener('click', () => {
+    const code = privateCodeDisp?.textContent;
+    navigator.clipboard.writeText(code).then(() => showToast('✓ Código copiado'));
+  });
+
+// ── Prevenir cierres accidentales durante el juego ──
+window.addEventListener('beforeunload', (e) => {
+  if (gameActive) { e.preventDefault(); e.returnValue = ''; }
 });
 
-// Teclado
-document.addEventListener('keydown', e => {
-  if (!board) return;
-  const moves = { ArrowUp:[-1,0], ArrowDown:[1,0], ArrowLeft:[0,-1], ArrowRight:[0,1] };
-  if (moves[e.key]) {
-    e.preventDefault();
-    const [dr,dc] = moves[e.key];
-    const nr = Math.max(0, Math.min(8, (selectedRow<0?0:selectedRow)+dr));
-    const nc = Math.max(0, Math.min(8, (selectedCol<0?0:selectedCol)+dc));
-    onBattleCellClick(nr, nc); return;
-  }
-  if (e.key >= '1' && e.key <= '9' && selectedRow !== -1) {
-    socket.emit('battle-move', { row: selectedRow, col: selectedCol, value: parseInt(e.key) });
-    return;
-  }
-  if ((e.key === 'Delete'||e.key === 'Backspace') && selectedRow !== -1) {
-    if (!board[selectedRow][selectedCol].fixed)
-      socket.emit('battle-move', { row: selectedRow, col: selectedCol, value: 0 });
+history.pushState(null, '', location.href);
+window.addEventListener('popstate', () => {
+  if (gameActive) {
+    history.pushState(null, '', location.href);
+    if (confirm('¿Salir de la batalla? Perderás la partida actual.')) {
+      gameActive = false;
+      stopTimer();
+      window.location.href = '/';
+    }
   }
 });
 
-// ============================================================
-// RENDERIZAR TABLERO DE BATALLA
-// ============================================================
+// ── Botón home durante batalla ──
+document.getElementById('btn-home-battle') &&
+  document.getElementById('btn-home-battle').addEventListener('click', () => {
+    if (gameActive && !confirm('¿Salir de la batalla? Perderás la partida.')) return;
+    gameActive = false;
+    stopTimer();
+    window.location.href = '/';
+  });
+
+// ── Timer ──
+function startTimer(srvTime) {
+  startTime = srvTime;
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    if (!timerEl) return;
+    timerEl.textContent = formatTime(Math.floor((Date.now() - startTime) / 1000));
+  }, 1000);
+}
+
+function stopTimer() { clearInterval(timerInterval); timerInterval = null; }
+
+function getCurrentElapsed() {
+  return startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
+}
+
+// ── Progreso ──
+function updateMyProgress(correct) {
+  myCorrectCells = correct;
+  const pct = totalCells > 0 ? (correct / totalCells) * 100 : 0;
+  if (yourFill)  yourFill.style.width  = pct + '%';
+  if (yourCount) yourCount.textContent = `${correct}/${totalCells}`;
+}
+
+function updateOppProgress(correct) {
+  oppCorrectCells = correct;
+  const pct = totalCells > 0 ? (correct / totalCells) * 100 : 0;
+  if (oppFill)    oppFill.style.width    = pct + '%';
+  if (oppCountEl) oppCountEl.textContent = `${correct}/${totalCells}`;
+}
+
+function updateMyErrors(count) {
+  myErrors = count;
+  if (myErrorsEl) myErrorsEl.textContent = count;
+}
+
+// ── Tablero ──
 function renderBattleBoard() {
-  const boardEl = document.getElementById('battle-board');
+  if (!boardEl || !board) return;
   boardEl.innerHTML = '';
-
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 9; c++) {
       const cell = board[r][c];
@@ -198,235 +239,317 @@ function renderBattleBoard() {
       el.className   = 'cell';
       el.dataset.row = r;
       el.dataset.col = c;
-
       if (r === c || r + c === 8) el.classList.add('diagonal');
       if (cell.fixed) {
         el.classList.add('fixed');
         el.textContent = cell.value;
       }
-
       el.addEventListener('click', () => onBattleCellClick(r, c));
       boardEl.appendChild(el);
     }
   }
-  updateBattleNumpadCounts();
 }
 
-function onBattleCellClick(row, col) {
-  if (board[row][col].fixed) return;
-  selectedRow = row; selectedCol = col;
+function setCellDisplay(el, value, isCorrect, isFixed) {
+  el.innerHTML    = '';
+  el.style.color  = '';
+  el.classList.remove('battle-error', 'battle-correct', 'error', 'correct');
 
-  document.querySelectorAll('#battle-board .cell').forEach(el => {
+  if (value !== 0) {
+    el.textContent = value;
+    if (!isFixed) {
+      if (isCorrect) {
+        el.style.color = MY_COLORS[playerIndex] || MY_COLOR;
+        el.classList.add('correct');
+      } else {
+        el.style.color = '#ef4444';
+        el.classList.add('battle-error');
+      }
+    }
+  }
+}
+
+// ── Selección y highlights ──
+function onBattleCellClick(row, col) {
+  selectedRow = row; selectedCol = col;
+  applyBattleHighlights();
+  playSound(typeof soundCellSelect !== 'undefined' ? soundCellSelect : null);
+}
+
+function applyBattleHighlights() {
+  if (!boardEl) return;
+  boardEl.querySelectorAll('.cell').forEach(el => {
     const r = parseInt(el.dataset.row);
     const c = parseInt(el.dataset.col);
-    el.classList.remove('selected', 'highlight', 'same-num');
+    el.classList.remove('selected','highlight','same-num');
 
-    if (r === row && c === col) { el.classList.add('selected'); return; }
-    if (r === row || c === col ||
-      (Math.floor(r/3)===Math.floor(row/3) && Math.floor(c/3)===Math.floor(col/3))) {
-      el.classList.add('highlight');
+    if (selectedRow === -1) return;
+    if (r === selectedRow && c === selectedCol) {
+      el.classList.add('selected');
+    } else {
+      const sameRow  = r === selectedRow;
+      const sameCol  = c === selectedCol;
+      const sameBox  = Math.floor(r/3) === Math.floor(selectedRow/3) && Math.floor(c/3) === Math.floor(selectedCol/3);
+      const selOnMD  = selectedRow === selectedCol;
+      const selOnAD  = selectedRow + selectedCol === 8;
+      const sameMD   = selOnMD && r === c;
+      const sameAD   = selOnAD && r + c === 8;
+      if (sameRow || sameCol || sameBox || sameMD || sameAD) el.classList.add('highlight');
     }
-    const selVal = board[row][col].value;
-    if (selVal && board[r][c].value === selVal) el.classList.add('same-num');
+
+    // Mismo número
+    if (selectedRow !== -1 && board[selectedRow][selectedCol].value !== 0 &&
+        board[r][c].value === board[selectedRow][selectedCol].value) {
+      el.classList.add('same-num');
+    }
   });
 }
 
-function getBattleCellEl(row, col) {
-  return document.querySelector(`#battle-board [data-row="${row}"][data-col="${col}"]`);
+// ── Numpad y controles ──
+numBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (selectedRow === -1 || !gameActive) return;
+    const value = parseInt(btn.dataset.num);
+    if (noteMode) {
+      // No permitir nota si ya existe en fila/col/box/diagonal
+      if (numConflictsForNote(selectedRow, selectedCol, value)) {
+        playSound(typeof soundBlocked !== 'undefined' ? soundBlocked : null);
+        showToast('Ya existe ese número en la fila, columna o diagonal');
+        return;
+      }
+      toggleNote(selectedRow, selectedCol, value);
+    } else {
+      if (board[selectedRow][selectedCol].fixed) return;
+      const prev = { row: selectedRow, col: selectedCol, prevValue: board[selectedRow][selectedCol].value };
+      undoStack.push(prev);
+      socket.emit('battle-move', { row: selectedRow, col: selectedCol, value });
+    }
+  });
+});
+
+btnNote && btnNote.addEventListener('click', () => {
+  noteMode = !noteMode;
+  btnNote.classList.toggle('active', noteMode);
+  boardEl && boardEl.classList.toggle('note-mode', noteMode);
+  numBtns.forEach(b => b.classList.toggle('note-mode', noteMode));
+});
+
+btnErase && btnErase.addEventListener('click', () => {
+  if (selectedRow === -1 || !gameActive) return;
+  const cell = board[selectedRow][selectedCol];
+  if (cell.fixed) return;
+
+  if (cell.value !== 0) {
+    // Borrar número
+    const prev = { row: selectedRow, col: selectedCol, prevValue: cell.value };
+    undoStack.push(prev);
+    socket.emit('battle-move', { row: selectedRow, col: selectedCol, value: 0 });
+  } else if (cell.notes && cell.notes.length > 0) {
+    // Borrar notas localmente
+    cell.notes = [];
+    const el = getBattleCellEl(selectedRow, selectedCol);
+    if (el) { el.innerHTML = ''; }
+  }
+  playSound(typeof soundErase !== 'undefined' ? soundErase : null);
+});
+
+btnUndo && btnUndo.addEventListener('click', () => {
+  if (!undoStack.length || !gameActive) return;
+  const last = undoStack.pop();
+  const cell = board[last.row][last.col];
+  const wasCorrect = cell.value !== 0 && cell.value === solution[last.row][last.col];
+  const willBeCorrect = last.prevValue !== 0 && last.prevValue === solution[last.row][last.col];
+
+  // Actualizar myCorrectCells
+  if (wasCorrect && !willBeCorrect)       myCorrectCells = Math.max(0, myCorrectCells - 1);
+  else if (!wasCorrect && willBeCorrect)  myCorrectCells++;
+
+  board[last.row][last.col].value = last.prevValue;
+  const el = getBattleCellEl(last.row, last.col);
+  if (el) {
+    el.classList.remove('battle-error','battle-correct','correct','error','correct-flash','error-shake');
+    el.style.color  = '';
+    el.innerHTML    = '';
+    if (last.prevValue !== 0) {
+      el.textContent = last.prevValue;
+      if (willBeCorrect) {
+        el.style.color = MY_COLORS[playerIndex] || MY_COLOR;
+        el.classList.add('correct');
+      } else {
+        el.style.color = '#ef4444';
+        el.classList.add('battle-error');
+      }
+    }
+  }
+  updateMyProgress(myCorrectCells);
+  updateBattleNumpadCounts();
+  playSound(typeof soundUndo !== 'undefined' ? soundUndo : null);
+});
+
+// ── Teclado ──
+document.addEventListener('keydown', (e) => {
+  if (!gameActive) return;
+  const moves = { ArrowUp:[-1,0], ArrowDown:[1,0], ArrowLeft:[0,-1], ArrowRight:[0,1] };
+  if (moves[e.key]) {
+    e.preventDefault();
+    const [dr, dc] = moves[e.key];
+    const nr = Math.max(0, Math.min(8, (selectedRow < 0 ? 0 : selectedRow) + dr));
+    const nc = Math.max(0, Math.min(8, (selectedCol < 0 ? 0 : selectedCol) + dc));
+    onBattleCellClick(nr, nc);
+    return;
+  }
+  if (e.key >= '1' && e.key <= '9' && selectedRow !== -1) {
+    const btn = document.querySelector(`#battle-numpad [data-num="${e.key}"]`);
+    btn && btn.click();
+    return;
+  }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && selectedRow !== -1) btnErase?.click();
+  if (e.key === 'n' || e.key === 'N') btnNote?.click();
+});
+
+// ── Notas locales ──
+function toggleNote(row, col, num) {
+  const cell = board[row][col];
+  if (cell.fixed || cell.value !== 0) return;
+  if (!cell.notes) cell.notes = [];
+  const idx = cell.notes.indexOf(num);
+  if (idx === -1) { cell.notes.push(num); cell.notes.sort((a,b) => a-b); }
+  else            { cell.notes.splice(idx, 1); }
+  renderNotes(row, col);
+  playSound(typeof soundNote !== 'undefined' ? soundNote : null);
 }
 
-function handleBattleNote(row, col, num) {
-  // Notas solo locales en batalla
-  if (!board[row][col].notes) board[row][col].notes = [];
-  const idx = board[row][col].notes.indexOf(num);
-  if (idx === -1) board[row][col].notes.push(num);
-  else            board[row][col].notes.splice(idx, 1);
-
+function renderNotes(row, col) {
   const el = getBattleCellEl(row, col);
   if (!el) return;
   el.innerHTML = '';
-  if (board[row][col].notes.length > 0) {
-    const grid = document.createElement('div');
-    grid.className = 'notes-grid';
-    for (let n = 1; n <= 9; n++) {
-      const span = document.createElement('span');
-      span.className = 'note-num';
-      if (board[row][col].notes.includes(n)) span.textContent = n;
-      grid.appendChild(span);
-    }
-    el.appendChild(grid);
+  const notes = board[row][col].notes || [];
+  if (notes.length === 0) return;
+  const grid = document.createElement('div');
+  grid.className = 'notes-grid';
+  for (let n = 1; n <= 9; n++) {
+    const span = document.createElement('span');
+    span.className = 'note-num';
+    if (notes.includes(n)) span.textContent = n;
+    grid.appendChild(span);
   }
+  el.appendChild(grid);
 }
 
+// ── Conflictos de notas ──
+function numConflictsForNote(row, col, num) {
+  for (let c = 0; c < 9; c++) if (board[row][c].value === num) return true;
+  for (let r = 0; r < 9; r++) if (board[r][col].value === num) return true;
+  const br = Math.floor(row/3)*3, bc = Math.floor(col/3)*3;
+  for (let r = br; r < br+3; r++) for (let c = bc; c < bc+3; c++) if (board[r][c].value === num) return true;
+  if (row === col)     for (let i = 0; i < 9; i++) if (board[i][i].value === num) return true;
+  if (row+col === 8)   for (let i = 0; i < 9; i++) if (board[i][8-i].value === num) return true;
+  return false;
+}
+
+// ── Numpad counts ──
 function updateBattleNumpadCounts() {
   if (!board) return;
   const counts = {1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0};
-  for (let r=0;r<9;r++) for (let c=0;c<9;c++) {
-    const v = board[r][c].value;
-    if (v) counts[v]++;
-  }
-  document.querySelectorAll('#battle-numpad .num-btn').forEach(btn => {
-    const num = parseInt(btn.dataset.num);
-    const rem = 9 - counts[num];
+  for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) { const v=board[r][c].value; if(v) counts[v]++; }
+  numBtns.forEach(btn => {
+    const num = parseInt(btn.dataset.num), rem = 9 - counts[num];
     const ce  = btn.querySelector('.num-count');
     if (ce) ce.textContent = rem > 0 ? rem : '';
     btn.classList.toggle('depleted', rem === 0);
   });
 }
 
-// ============================================================
-// TIMER
-// ============================================================
-function startBattleTimer(from) {
-  startTime = from;
-  timerInterval = setInterval(() => {
-    const elapsed = Math.floor((Date.now() - startTime) / 1000);
-    document.getElementById('battle-timer').textContent = formatTime(elapsed);
-  }, 1000);
+// ── Animaciones ──
+function animateCorrect(el) {
+  el.classList.remove('correct-flash');
+  void el.offsetWidth; // reflow para reiniciar animación
+  el.classList.add('correct-flash');
+  setTimeout(() => el.classList.remove('correct-flash'), 500);
 }
 
-function stopTimer() { clearInterval(timerInterval); }
-
-function formatTime(s) {
-  return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+function animateError(el) {
+  el.classList.remove('error-shake');
+  void el.offsetWidth;
+  el.classList.add('error-shake');
+  setTimeout(() => el.classList.remove('error-shake'), 400);
 }
 
-// ============================================================
-// PROGRESO
-// ============================================================
-function updateMyProgress(correct) {
-  myCorrectCells = correct;
-  const pct = totalCells > 0 ? (myCorrectCells / totalCells) * 100 : 0;
-  const fill = document.getElementById('your-progress-fill');
-  if (fill) fill.style.width = `${pct}%`;
-  const counter = document.getElementById('your-cells-count');
-  if (counter) counter.textContent = myCorrectCells;
-}
-
-function updateOppProgress(correct) {
-  oppCorrect = correct;
-  const pct = totalCells > 0 ? (oppCorrect / totalCells) * 100 : 0;
-  const fill = document.getElementById('opp-progress-fill');
-  if (fill) fill.style.width = `${pct}%`;
-  const counter = document.getElementById('opp-cells-display');
-  if (counter) counter.textContent = oppCorrect;
-}
-
-function updateErrorDots(errors) {
-  for (let i = 1; i <= 3; i++) {
-    const dot = document.getElementById(`battle-error-dot-${i}`);
-    if (dot) dot.classList.toggle('error-dot-used', i <= errors);
-  }
-}
-
-function showPenalty(secs) {
-  const penaltyEl = document.getElementById('battle-penalty');
-  const secsEl    = document.getElementById('penalty-secs');
-  if (!penaltyEl || !secsEl) return;
-  secsEl.textContent = secs;
-  penaltyEl.classList.remove('hidden');
-  penaltyEl.classList.add('penalty-flash');
-  setTimeout(() => {
-    penaltyEl.classList.remove('penalty-flash');
-    setTimeout(() => penaltyEl.classList.add('hidden'), 2000);
-  }, 1000);
-}
-
-// ============================================================
-// RESULTADO FINAL
-// ============================================================
-function showResult({ won, reason, elapsed, errors, penalty, opponentName, opponentTime }) {
+// ── Resultado ──
+function showResult({ won, reason, elapsed, errors }) {
   stopTimer();
+  gameActive = false;
 
-  const resultScreen = document.getElementById('battle-result');
-  const emoji   = document.getElementById('result-emoji');
-  const title   = document.getElementById('result-title');
+  const emoji    = document.getElementById('result-emoji');
+  const title    = document.getElementById('result-title');
   const subtitle = document.getElementById('result-subtitle');
-  const timeEl  = document.getElementById('result-time');
+  const timeEl   = document.getElementById('result-time');
   const errorsEl = document.getElementById('result-errors');
-  const penaltyEl = document.getElementById('result-penalty');
+  const penaltyEl= document.getElementById('result-penalty');
+
+  if (emoji) emoji.textContent = won ? '🏆' : '😔';
+  if (title) title.textContent = won ? '¡Ganaste!' : 'Perdiste';
+
+  const reasons = {
+    completed:         won ? `Completaste el tablero en ${formatTime(elapsed)}` : `${opponentName} terminó primero`,
+    opponent_finished: `${opponentName} terminó en ${formatTime(elapsed || 0)}`,
+    opponent_errors:   `${opponentName} acumuló demasiados errores`,
+    errors:            'Cometiste demasiados errores',
+    disconnect:        `${opponentName} se desconectó`,
+  };
+  if (subtitle) subtitle.textContent = reasons[reason] || '';
+  if (timeEl)   timeEl.textContent   = formatTime(elapsed || getCurrentElapsed());
+  if (errorsEl) errorsEl.textContent = errors || myErrors;
+  if (penaltyEl) penaltyEl.closest('.result-stat')?.style && (penaltyEl.closest('.result-stat').style.display = 'none');
+
+  showScreen('result');
 
   if (won) {
-    emoji.textContent    = '🏆';
-    title.textContent    = '¡Ganaste!';
-    subtitle.textContent = reason === 'opponent_errors'
-      ? `${opponentName} cometió demasiados errores`
-      : `Terminaste primero · ${opponentName}: ${formatTime(opponentTime||0)}`;
+    playSound(typeof soundWin !== 'undefined' ? soundWin : null);
     launchBattleConfetti();
-  } else {
-    emoji.textContent    = '😤';
-    title.textContent    = 'Perdiste';
-    subtitle.textContent = reason === 'errors'
-      ? 'Cometiste demasiados errores'
-      : `${opponentName} terminó primero · Su tiempo: ${formatTime(opponentTime||0)}`;
   }
-
-  timeEl.textContent    = formatTime(elapsed || 0);
-  errorsEl.textContent  = errors || 0;
-  penaltyEl.textContent = `+${penalty || 0}s`;
-
-  resultScreen.classList.remove('hidden');
 }
 
 function launchBattleConfetti() {
   const canvas = document.getElementById('battle-confetti');
+  if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  canvas.width=window.innerWidth; canvas.height=window.innerHeight;
-  const pts = Array.from({length:120},()=>({
-    x:Math.random()*canvas.width,y:-20,
-    w:Math.random()*10+5,h:Math.random()*6+3,
-    color:['#e02454','#f59e0b','#2563eb','#10b981'][Math.floor(Math.random()*4)],
-    speed:Math.random()*4+2,angle:Math.random()*360,spin:Math.random()*6-3,drift:Math.random()*2-1,
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+  const pts = Array.from({length:120}, () => ({
+    x: Math.random()*canvas.width, y: -20,
+    w: Math.random()*10+4, h: Math.random()*6+3,
+    color: ['#e02454','#f59e0b','#2563eb','#10b981','#ec4899'][Math.floor(Math.random()*5)],
+    speed: Math.random()*4+2, drift: Math.random()*2-1, angle: Math.random()*360, spin: Math.random()*6-3,
   }));
-  let n=0;
-  (function draw(){
+  let n = 0;
+  (function draw() {
     ctx.clearRect(0,0,canvas.width,canvas.height); n++;
-    pts.forEach(p=>{
-      p.y+=p.speed;p.x+=p.drift;p.angle+=p.spin;
-      ctx.save();ctx.translate(p.x+p.w/2,p.y+p.h/2);ctx.rotate(p.angle*Math.PI/180);
-      ctx.fillStyle=p.color;ctx.globalAlpha=Math.max(0,1-n/180);
-      ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore();
+    pts.forEach(p => {
+      p.y+=p.speed; p.x+=p.drift; p.angle+=p.spin;
+      ctx.save(); ctx.translate(p.x+p.w/2, p.y+p.h/2); ctx.rotate(p.angle*Math.PI/180);
+      ctx.fillStyle=p.color; ctx.globalAlpha=Math.max(0,1-n/180);
+      ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore();
     });
-    if(n<200) requestAnimationFrame(draw);
+    if (n < 200) requestAnimationFrame(draw);
   })();
 }
 
-// ============================================================
-// BOTONES DE RESULTADO
-// ============================================================
-document.getElementById('btn-rematch').addEventListener('click', () => {
-  document.getElementById('battle-result').classList.add('hidden');
-  showScreen('search');
-  board = null; selectedRow = -1; selectedCol = -1;
-  myErrors = 0; myPenalty = 0; myCorrectCells = 0; oppCorrect = 0;
-  undoStack = [];
+// ── Revancha y volver ──
+document.getElementById('btn-rematch') && document.getElementById('btn-rematch').addEventListener('click', () => {
+  sessionStorage.setItem('battleAction', 'find');
+  sessionStorage.setItem('battleDiff', currentDiff);
+  sessionStorage.setItem('battleName', playerName);
+  window.location.reload();
 });
 
-document.getElementById('btn-back-home').addEventListener('click', () => {
+document.getElementById('btn-back-home') && document.getElementById('btn-back-home').addEventListener('click', () => {
+  gameActive = false;
   window.location.href = '/';
 });
 
-// ============================================================
-// TOAST
-// ============================================================
-function showToast(msg) {
-  const el = document.getElementById('battle-toast');
-  if (!el) return;
-  el.textContent = msg;
-  el.classList.remove('hidden');
-  setTimeout(() => el.classList.add('hidden'), 2500);
-}
+// ── EVENTOS DEL SERVIDOR ──
 
-function playSound(fn) {
-  if (!soundEnabled) return;
-  try { fn(); } catch(e) {}
-}
-
-// ============================================================
-// EVENTOS DEL SERVIDOR
-// ============================================================
-
-socket.on('battle-waiting', ({ message }) => {
+socket.on('battle-waiting', () => {
   showScreen('waiting');
 });
 
@@ -435,100 +558,101 @@ socket.on('battle-search-cancelled', () => {
 });
 
 socket.on('battle-private-created', ({ code, playerIndex: pi, puzzle: puz, solution: sol }) => {
-  battleCode   = code;
-  playerIndex  = pi;
-  solution     = sol;
-  board        = puz;
-
-  document.getElementById('private-code-display').textContent = code;
+  playerIndex = pi;
+  board       = puz;
+  solution    = sol;
+  if (privateCodeDisp) privateCodeDisp.textContent = code;
   showScreen('privateWait');
 });
 
-socket.on('battle-start', ({ code, playerIndex: pi, puzzle: puz, solution: sol, opponentName, totalCells: tc, startTime: st }) => {
-  battleCode  = code;
-  playerIndex = pi;
-  solution    = sol;
-  board       = puz;
-  totalCells  = tc;
+socket.on('battle-start', ({ code, playerIndex: pi, puzzle: puz, solution: sol, opponentName: oppName, totalCells: total, startTime: srvTime }) => {
+  playerIndex  = pi;
+  board        = puz;
+  solution     = sol;
+  opponentName = oppName;
+  totalCells   = total;
+  battleCode   = code;
+  myCorrectCells  = 0;
+  oppCorrectCells = 0;
+  myErrors        = 0;
+  undoStack.length = 0;
+  gameActive      = true;
 
-  // Nombres en la barra de progreso
-  const yourName = document.getElementById('your-progress-name');
-  const oppName  = document.getElementById('opp-progress-name');
-  const total    = document.getElementById('total-cells-display');
-  if (yourName) yourName.textContent = playerName;
-  if (oppName)  oppName.textContent  = opponentName;
-  if (total)    total.textContent    = `/ ${tc}`;
+  // Nombres
+  if (yourNameEl) yourNameEl.textContent = playerName;
+  if (oppNameEl)  oppNameEl.textContent  = oppName;
+  if (totalEl)    totalEl.textContent    = `/ ${total}`;
 
-  showScreen('battle');
+  updateMyProgress(0);
+  updateOppProgress(0);
+  updateMyErrors(0);
+
   renderBattleBoard();
-  startBattleTimer(st);
+  updateBattleNumpadCounts();
+  startTimer(srvTime);
+  showScreen('battle');
+
+  playSound(typeof soundPlayerJoined !== 'undefined' ? soundPlayerJoined : null);
 });
 
-socket.on('battle-cell-result', ({ row, col, value, correct, errors, penalty }) => {
-  myErrors  = errors;
-  myPenalty = penalty;
-
-  const prevVal = board[row][col].value;
+socket.on('battle-cell-result', ({ row, col, value, correct, errors }) => {
   board[row][col].value = value;
-
   const el = getBattleCellEl(row, col);
   if (!el) return;
 
-  el.classList.remove('battle-correct', 'battle-error', 'correct', 'error');
-  el.innerHTML = '';
+  // Limpiar estado anterior completamente
+  el.classList.remove('battle-error','battle-correct','correct','error','correct-flash','error-shake');
+  el.style.color = '';
+  el.innerHTML   = '';
 
-  if (value !== 0) {
+  if (value === 0) {
+    // Celda borrada
+    if (el.classList.contains('fixed')) el.textContent = board[row][col].value || '';
+  } else if (correct) {
     el.textContent = value;
-    if (correct) {
-      el.classList.add('correct', 'correct-flash');
-      setTimeout(() => el.classList.remove('correct-flash'), 600);
-      playSound(soundCorrect);
-      if (navigator.vibrate) navigator.vibrate(40);
-      myCorrectCells++;
-      updateMyProgress(myCorrectCells);
-      undoStack.push({ row, col, prevValue: prevVal });
-    } else {
-      el.classList.add('error');
-      el.style.color = '#ef4444';
-      playSound(soundError);
-      if (navigator.vibrate) navigator.vibrate([60,40,60]);
-      updateErrorDots(errors);
-      showPenalty(penalty);
-    }
+    el.style.color = MY_COLORS[playerIndex] || MY_COLOR;
+    el.classList.add('correct');
+    animateCorrect(el);
+    myCorrectCells++;
+    updateMyProgress(myCorrectCells);
+    playSound(typeof soundCorrect !== 'undefined' ? soundCorrect : null);
   } else {
-    // Borrado
-    if (prevVal && prevVal === solution[row][col]) {
-      myCorrectCells = Math.max(0, myCorrectCells - 1);
-      updateMyProgress(myCorrectCells);
-    }
+    el.textContent = value;
+    el.style.color = '#ef4444';
+    el.classList.add('battle-error');
+    animateError(el);
+    updateMyErrors(errors);
+    playSound(typeof soundError !== 'undefined' ? soundError : null);
   }
 
   updateBattleNumpadCounts();
+  applyBattleHighlights();
 });
 
-socket.on('battle-opponent-progress', ({ correctCells, totalCells: tc }) => {
+socket.on('battle-opponent-progress', ({ correctCells }) => {
   updateOppProgress(correctCells);
 });
 
 socket.on('battle-opponent-error', ({ errors }) => {
-  showToast(`⚠️ Tu oponente cometió un error (${errors}/3)`);
+  // Solo visual feedback, sin penalización
+  showToast(`⚠️ Tu rival cometió un error (${errors} total)`);
 });
 
-socket.on('battle-won', ({ reason, elapsed, errors, penalty, opponentName, opponentTime }) => {
-  showResult({ won: true, reason, elapsed, errors, penalty, opponentName, opponentTime });
+socket.on('battle-won', ({ reason, elapsed, errors }) => {
+  showResult({ won: true, reason, elapsed, errors });
 });
 
-socket.on('battle-lost', ({ reason, opponentName, opponentTime }) => {
-  const elapsed = Math.floor((Date.now() - startTime) / 1000);
-  showResult({ won: false, reason, elapsed, errors: myErrors, penalty: myPenalty, opponentName, opponentTime });
+socket.on('battle-lost', ({ reason, opponentTime, opponentName: oppN }) => {
+  opponentName = oppN || opponentName;
+  showResult({ won: false, reason, elapsed: opponentTime, errors: myErrors });
 });
 
 socket.on('battle-opponent-disconnected', () => {
   stopTimer();
-  showToast('Tu oponente se desconectó. ¡Ganaste por abandono!');
-  setTimeout(() => showResult({
-    won: true, reason: 'disconnect',
-    elapsed: Math.floor((Date.now() - startTime) / 1000),
-    errors: myErrors, penalty: myPenalty,
-  }), 2000);
+  showResult({ won: true, reason: 'disconnect', elapsed: getCurrentElapsed(), errors: myErrors });
+});
+
+socket.on('error', (msg) => {
+  showToast('Error: ' + msg);
+  showScreen('search');
 });

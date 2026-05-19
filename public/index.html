@@ -154,21 +154,9 @@
             <span class="bm-icon">🔒</span>
             <div class="bm-text">
               <span class="bm-title">Sala privada</span>
-              <span class="bm-sub">Con código · Para amigos</span>
+              <span class="bm-sub">Creá o unite con código</span>
             </div>
           </button>
-        </div>
-
-        <div style="width:100%">
-          <div class="label-sm">Unirse con código</div>
-          <div class="join-stack">
-            <input
-              type="text" id="batalla-code-input" class="join-input-home"
-              placeholder="Código · ej: BK4M9" maxlength="5"
-              autocomplete="off" autocorrect="off" spellcheck="false"
-            >
-            <button id="btn-batalla-join" class="join-btn-full">Unirse →</button>
-          </div>
         </div>
 
       </div>
@@ -295,7 +283,7 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="lobby.js"></script>
   <script>
-    // Cerrar sheet
+    // ── Cerrar sheet ──
     document.getElementById('btn-sheet-close').addEventListener('click', () => {
       const s = document.getElementById('nuevo-juego-sheet');
       const o = document.getElementById('nuevo-juego-overlay');
@@ -303,7 +291,7 @@
       setTimeout(() => { s.classList.add('hidden'); o.classList.add('hidden'); }, 300);
     });
 
-    // Batalla: dificultad
+    // ── Batalla: dificultad ──
     let batallaDiff = 'hard';
     document.querySelectorAll('.batalla-diff-pill').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -313,27 +301,40 @@
       });
     });
 
-    function goToBattle(action, code) {
+    function goToBattle(action) {
       sessionStorage.setItem('battleAction', action);
       sessionStorage.setItem('battleDiff',   batallaDiff);
       sessionStorage.setItem('battleName',   localStorage.getItem('playerName') || 'Anónimo');
-      if (code) sessionStorage.setItem('battleCode', code);
       window.location.href = '/battle.html';
     }
 
     document.getElementById('btn-batalla-find').addEventListener('click',    () => goToBattle('find'));
     document.getElementById('btn-batalla-private').addEventListener('click', () => goToBattle('private'));
-    document.getElementById('btn-batalla-join').addEventListener('click', () => {
-      const code = document.getElementById('batalla-code-input').value.trim().toUpperCase();
-      if (!code) return;
-      goToBattle('join', code);
-    });
-    document.getElementById('batalla-code-input').addEventListener('input', e => {
-      e.target.value = e.target.value.toUpperCase();
-    });
-    document.getElementById('batalla-code-input').addEventListener('keydown', e => {
-      if (e.key === 'Enter') document.getElementById('btn-batalla-join').click();
-    });
+
+    // ── Leer código de sala desde URL (?code=XXXX) ──
+    const urlParams  = new URLSearchParams(window.location.search);
+    const codeParam  = urlParams.get('code');
+    const tabParam   = urlParams.get('tab');
+
+    if (codeParam) {
+      const codeInput = document.getElementById('room-code-input');
+      if (codeInput) codeInput.value = codeParam.toUpperCase();
+    }
+
+    // ── Activar tab desde URL (?tab=perfil) — corre después de lobby.js ──
+    if (tabParam) {
+      const navBtns = document.querySelectorAll('.nav-btn');
+      const views   = document.querySelectorAll('.view');
+      navBtns.forEach(b => b.classList.remove('active'));
+      views.forEach(v => v.classList.remove('active-view'));
+      const tabBtn  = document.querySelector(`.nav-btn[data-tab="${tabParam}"]`);
+      const tabView = document.getElementById(`view-${tabParam}`);
+      if (tabBtn)  tabBtn.classList.add('active');
+      if (tabView) tabView.classList.add('active-view');
+      if (tabParam === 'perfil' && typeof renderProfile === 'function') renderProfile();
+      // Limpiar URL sin recargar
+      window.history.replaceState({}, '', '/');
+    }
   </script>
 </body>
 </html>

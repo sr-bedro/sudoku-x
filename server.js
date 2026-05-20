@@ -59,13 +59,12 @@ function solve(board) {
   return true;
 }
 
-// Niveles de dificultad: cantidad de celdas a eliminar
 const DIFFICULTY_HOLES = {
-  easy:    26,   // 55 pistas
-  normal:  36,   // 45 pistas
-  hard:    46,   // 35 pistas
-  expert:  53,   // 28 pistas
-  extreme: 58,   // 23 pistas
+  easy:    26,
+  normal:  36,
+  hard:    46,
+  expert:  53,
+  extreme: 58,
 };
 
 function generateSudokuX(difficulty = 'hard') {
@@ -102,7 +101,7 @@ function buildRoom(puzzle, solution, playerName = 'Jugador 1', difficulty = 'har
       { id: null, color: '#2563eb', name: playerName, connected: false, cursor: null, errors: 0 }
     ],
     startTime: null, savedElapsed: 0,
-    completedSections: { rows: new Set(), cols: new Set(), boxes: new Set() },
+    completedSections: { rows: new Set(), cols: new Set(), boxes: new Set(), diagonals: new Set() },
     soloMode: true,
   };
 }
@@ -111,9 +110,9 @@ function resetBoard(room) {
   room.board = room.originalPuzzle.map(row => row.map(cell => ({
     value: cell, player: null, fixed: cell !== 0, notes: [],
   })));
-  room.startTime   = Date.now();
+  room.startTime    = Date.now();
   room.savedElapsed = 0;
-  room.completedSections = { rows: new Set(), cols: new Set(), boxes: new Set() };
+  room.completedSections = { rows: new Set(), cols: new Set(), boxes: new Set(), diagonals: new Set() };
   room.players.forEach(p => { p.errors = 0; });
   room.soloMode = false;
 }
@@ -121,14 +120,18 @@ function resetBoard(room) {
 function checkSections(room, row, col) {
   const { board, solution, completedSections } = room;
   const completed = [];
+
+  // Fila
   if (!completedSections.rows.has(row)) {
     const ok = board[row].every((cell, c) => cell.value !== 0 && cell.value === solution[row][c]);
     if (ok) { completedSections.rows.add(row); completed.push({ type: 'row', index: row }); }
   }
+  // Columna
   if (!completedSections.cols.has(col)) {
     const ok = board.every((r, ri) => r[col].value !== 0 && r[col].value === solution[ri][col]);
     if (ok) { completedSections.cols.add(col); completed.push({ type: 'col', index: col }); }
   }
+  // Caja
   const boxRow = Math.floor(row / 3), boxCol = Math.floor(col / 3), boxKey = boxRow * 3 + boxCol;
   if (!completedSections.boxes.has(boxKey)) {
     let ok = true;
@@ -137,6 +140,25 @@ function checkSections(room, row, col) {
         if (board[r][c].value === 0 || board[r][c].value !== solution[r][c]) ok = false;
     if (ok) { completedSections.boxes.add(boxKey); completed.push({ type: 'box', boxRow, boxCol }); }
   }
+  // Diagonal principal (r === c)
+  if ((row === col) && !completedSections.diagonals.has('main')) {
+    const ok = Array.from({length:9}, (_,i) => i)
+      .every(i => board[i][i].value !== 0 && board[i][i].value === solution[i][i]);
+    if (ok) {
+      completedSections.diagonals.add('main');
+      completed.push({ type: 'diagonal', which: 'main' });
+    }
+  }
+  // Diagonal anti (r + c === 8)
+  if ((row + col === 8) && !completedSections.diagonals.has('anti')) {
+    const ok = Array.from({length:9}, (_,i) => i)
+      .every(i => board[i][8-i].value !== 0 && board[i][8-i].value === solution[i][8-i]);
+    if (ok) {
+      completedSections.diagonals.add('anti');
+      completed.push({ type: 'diagonal', which: 'anti' });
+    }
+  }
+
   return completed;
 }
 
@@ -168,7 +190,7 @@ io.on('connection', (socket) => {
       board: savedBoard,
       players: [{ id: null, color: '#2563eb', name: playerName || 'Jugador 1', connected: false, cursor: null, errors: 0 }],
       startTime: null, savedElapsed: elapsed || 0,
-      completedSections: { rows: new Set(), cols: new Set(), boxes: new Set() },
+      completedSections: { rows: new Set(), cols: new Set(), boxes: new Set(), diagonals: new Set() },
       soloMode: true,
     };
     socket.emit('room-created', {
@@ -209,7 +231,6 @@ io.on('connection', (socket) => {
     const connected = room.players.filter(p => p.connected);
 
     if (connected.length === 1 && playerIndex === 0) {
-      // Modo solo — arranca inmediatamente
       if (!room.startTime) room.startTime = Date.now();
       room.soloMode = true;
       socket.emit('game-start', {
@@ -221,7 +242,6 @@ io.on('connection', (socket) => {
         solo:         true,
       });
     } else if (connected.length === 2) {
-      // Modo cooperativo — resetear tablero y timer
       resetBoard(room);
       io.to(code).emit('partner-joined', {
         board:      room.board,
@@ -268,7 +288,9 @@ io.on('connection', (socket) => {
         ? Math.floor((Date.now() - room.startTime) / 1000) + (room.savedElapsed || 0)
         : 0;
       io.to(code).emit('game-won', {
-        elapsed, errors: room.players.reduce((s, p) => s + (p.errors || 0), 0), difficulty: room.difficulty,
+        elapsed, errors: room.players.reduce((s, p) => s + (p.errors || 0), 0),
+        difficulty: room.difficulty,
+        coop: room.players.filter(p => p.connected).length === 2,
       });
     }
   });
@@ -331,7 +353,7 @@ io.on('connection', (socket) => {
 });
 
 // ============================================================
-// BATALLA — sin límite de errores ni penalización de tiempo
+// BATALLA
 // ============================================================
 
 const battleQueue = [];
@@ -349,14 +371,11 @@ function buildBattleRoom(puzzle, solution, players) {
       id: p.id, name: p.name,
       color:        i === 0 ? '#e02454' : '#f59e0b',
       board:        puzzle.map(row => row.map(cell => ({ value: cell, fixed: cell !== 0, notes: [] }))),
-      correctCells: 0,
-      errors:       0,
-      finished:     false,
-      finishTime:   null,
+      correctCells: 0, errors: 0, finished: false, finishTime: null,
     })),
-    startTime:  null,
+    startTime: null,
     totalCells: emptyCount,
-    status:     'waiting',
+    status: 'waiting',
   };
 }
 
@@ -371,7 +390,6 @@ io.on('connection', (socket) => {
     const opp  = battleQueue.splice(0, 1)[0];
     const code = generateBattleCode();
     const { puzzle, solution } = generateSudokuX(difficulty);
-
     battleRooms[code] = buildBattleRoom(puzzle, solution, [
       { id: opp.id, name: opp.name },
       { id: socket.id, name: playerName },
@@ -380,7 +398,6 @@ io.on('connection', (socket) => {
     opp.socket.battleCode = code; socket.battleCode = code;
     battleRooms[code].startTime = Date.now();
     battleRooms[code].status    = 'playing';
-
     const room = battleRooms[code];
     const base = { code, solution, totalCells: room.totalCells, startTime: room.startTime };
     opp.socket.emit('battle-start', { ...base, playerIndex: 0, puzzle: room.players[0].board, opponentName: playerName });
@@ -400,18 +417,16 @@ io.on('connection', (socket) => {
     const room = battleRooms[code];
     if (!room)                    { socket.emit('error', 'Sala no encontrada'); return; }
     if (room.players.length >= 2) { socket.emit('error', 'Sala llena');         return; }
-
     room.players.push({
       id: socket.id, name: playerName, color: '#f59e0b',
-      board:        room.puzzle.map(row => row.map(cell => ({ value: cell, fixed: cell !== 0, notes: [] }))),
+      board: room.puzzle.map(row => row.map(cell => ({ value: cell, fixed: cell !== 0, notes: [] }))),
       correctCells: 0, errors: 0, finished: false, finishTime: null,
     });
     socket.join(code); socket.battleCode = code;
     room.startTime = Date.now(); room.status = 'playing';
-
     const base = { code, solution: room.solution, totalCells: room.totalCells, startTime: room.startTime };
     io.to(room.players[0].id).emit('battle-start', { ...base, playerIndex: 0, puzzle: room.players[0].board, opponentName: playerName });
-    socket.emit('battle-start',                    { ...base, playerIndex: 1, puzzle: room.players[1].board, opponentName: room.players[0]?.name || 'Oponente' });
+    socket.emit('battle-start', { ...base, playerIndex: 1, puzzle: room.players[1].board, opponentName: room.players[0]?.name || 'Oponente' });
   });
 
   socket.on('battle-move', ({ row, col, value }) => {
@@ -430,26 +445,21 @@ io.on('connection', (socket) => {
     const correct   = value === 0 || value === room.solution[row][col];
 
     if (value === 0) {
-      // Borrar — si la celda tenía un valor correcto, restamos
-      if (prevValue !== 0 && prevValue === room.solution[row][col]) {
+      if (prevValue !== 0 && prevValue === room.solution[row][col])
         player.correctCells = Math.max(0, player.correctCells - 1);
-      }
       socket.emit('battle-cell-result', { row, col, value: 0, correct: true, errors: player.errors });
     } else if (!correct) {
-      // Error — solo contamos, sin penalización de tiempo
       player.errors++;
       socket.emit('battle-cell-result', { row, col, value, correct: false, errors: player.errors });
       const oppId = room.players[pi === 0 ? 1 : 0]?.id;
       if (oppId) io.to(oppId).emit('battle-opponent-error', { errors: player.errors });
     } else {
-      // Correcto
       player.correctCells++;
       socket.emit('battle-cell-result', { row, col, value, correct: true, errors: player.errors });
       const oppId = room.players[pi === 0 ? 1 : 0]?.id;
       if (oppId) io.to(oppId).emit('battle-opponent-progress', { correctCells: player.correctCells, totalCells: room.totalCells });
-
       if (player.correctCells >= room.totalCells) {
-        player.finished   = true;
+        player.finished = true;
         player.finishTime = Math.floor((Date.now() - room.startTime) / 1000);
         socket.emit('battle-won', { reason: 'completed', elapsed: player.finishTime, errors: player.errors });
         const opp = room.players[pi === 0 ? 1 : 0];

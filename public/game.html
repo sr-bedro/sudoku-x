@@ -2,128 +2,184 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="color-scheme" content="light only">
   <title>Sudoku X</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <style>
+    html { touch-action: manipulation; overscroll-behavior: none; }
+    body { overflow: hidden; overscroll-behavior: none; }
+
+    /* ── correct/error flash (override para game) ── */
+    @keyframes correctFlashGame {
+      0%   { background: var(--surface); }
+      30%  { background: rgba(37,99,235,0.18); box-shadow: inset 0 0 0 2px var(--p1); }
+      100% { background: var(--surface); box-shadow: none; }
+    }
+    @keyframes errorFlashGame {
+      0%,100% { transform: translateX(0); }
+      25%     { transform: translateX(-4px); }
+      75%     { transform: translateX(4px); }
+    }
+    .cell.correct-flash { animation: correctFlashGame 0.5s ease forwards; }
+    .cell.error-flash   { animation: errorFlashGame 0.3s ease; }
+
+    /* ── note mode: notas en violeta ── */
+    .board.note-mode .notes-grid .note-num { color: #7c3aed; }
+    .num-btn.note-mode .num-val { color: #7c3aed; font-weight: 900; }
+
+    /* ── Players bar coop: inicialmente oculta ── */
+    .players-bar { margin-bottom: 0; }
+  </style>
 </head>
 <body data-theme="light">
-  <div class="game-wrapper">
-    <div class="game-container">
+<div class="game-wrapper">
+  <div class="game-container">
 
-      <div class="game-header">
-        <button class="home-btn" id="btn-home">🏠</button>
-        <div id="timer" class="timer">00:00</div>
-        <div class="header-right">
-          <div class="room-code-display">
-            <span id="display-code">----</span>
-            <button id="btn-share" class="share-btn" title="Compartir">
-              <span>📤</span>
-            </button>
-          </div>
-          <div class="error-badge" id="error-badge">✕ <span id="error-count">0</span></div>
+    <!-- ══ HEADER ══ -->
+    <div class="game-header">
+
+      <!-- Fila 1: navegación -->
+      <div class="game-header-top">
+        <button class="home-btn" id="btn-home">←</button>
+        <div style="flex:1"></div>
+        <div class="hdr-actions">
+          <button class="hdr-btn" id="btn-share" title="Invitar">📤</button>
+          <button class="hdr-btn" id="btn-settings" title="Ajustes">⚙️</button>
         </div>
       </div>
 
-      <div class="players-bar">
-        <div class="player-tag p1-tag">
-          <div class="player-dot" style="background:#2563eb"></div>
-          <span id="p1-name">J1</span>
-        </div>
-        <div id="status-message" class="status-message">Esperando...</div>
-        <div class="player-tag p2-tag">
-          <div class="player-dot" style="background:#7c3aed"></div>
-          <span id="p2-name">J2</span>
-        </div>
-      </div>
-
-      <div id="board" class="board"></div>
-
-      <div class="toolbar">
-        <button class="tool-btn" id="btn-undo">
-          <span class="tool-icon">↩</span>
-          <span class="tool-label">Deshacer</span>
-        </button>
-        <button class="tool-btn" id="btn-erase">
-          <span class="tool-icon">⌫</span>
-          <span class="tool-label">Borrar</span>
-        </button>
-        <button class="tool-btn" id="btn-note">
-          <span class="tool-icon">✏️</span>
-          <span class="tool-label">Lápiz</span>
-        </button>
-        <button class="tool-btn" id="btn-sound">
-          <span class="tool-icon">🔊</span>
-          <span class="tool-label">Sonido</span>
-        </button>
-        <button class="tool-btn" id="btn-save">
-          <span class="tool-icon">💾</span>
-          <span class="tool-label">Guardar</span>
-        </button>
-      </div>
-
-      <div class="numpad">
-        <button class="num-btn" data-num="1"><span class="num-val">1</span><span class="num-count"></span></button>
-        <button class="num-btn" data-num="2"><span class="num-val">2</span><span class="num-count"></span></button>
-        <button class="num-btn" data-num="3"><span class="num-val">3</span><span class="num-count"></span></button>
-        <button class="num-btn" data-num="4"><span class="num-val">4</span><span class="num-count"></span></button>
-        <button class="num-btn" data-num="5"><span class="num-val">5</span><span class="num-count"></span></button>
-        <button class="num-btn" data-num="6"><span class="num-val">6</span><span class="num-count"></span></button>
-        <button class="num-btn" data-num="7"><span class="num-val">7</span><span class="num-count"></span></button>
-        <button class="num-btn" data-num="8"><span class="num-val">8</span><span class="num-count"></span></button>
-        <button class="num-btn" data-num="9"><span class="num-val">9</span><span class="num-count"></span></button>
+      <!-- Fila 2: info de la partida -->
+      <div class="game-header-info">
+        <div class="hdr-errors" id="error-badge">✕ <span id="error-count">0</span></div>
+        <div class="hdr-diff" id="header-diff">Difícil</div>
+        <div class="hdr-timer" id="timer">00:00</div>
       </div>
 
     </div>
-  </div>
 
-  <div id="save-toast" class="save-toast hidden">✓ Partida guardada</div>
-
-  <!-- Modal compartir -->
-  <div id="share-modal" class="modal-overlay hidden">
-    <div class="modal-card">
-      <h3>Invitar a jugar</h3>
-      <div class="share-code-display" id="share-code-big">----</div>
-      <p class="share-hint">Mandá este código o el link directo</p>
-      <div class="share-buttons">
-        <button id="share-whatsapp" class="share-action-btn whatsapp-btn">
-          <span>💬</span> WhatsApp
-        </button>
-        <button id="share-copy" class="share-action-btn copy-btn">
-          <span>📋</span> Copiar link
-        </button>
+    <!-- ══ BARRA COOP (oculta en single player) ══ -->
+    <div class="players-bar hidden-coop" id="players-bar">
+      <div class="player-tag p1-tag">
+        <div class="player-dot" style="background:#2563eb"></div>
+        <span id="p1-name">J1</span>
       </div>
-      <button id="share-close" class="modal-close">Cerrar</button>
+      <div id="status-message" class="status-message"></div>
+      <div class="player-tag p2-tag">
+        <div class="player-dot" style="background:#7c3aed"></div>
+        <span id="p2-name">J2</span>
+      </div>
     </div>
-  </div>
 
-  <div id="win-screen" class="win-screen hidden">
-    <canvas id="confetti-canvas"></canvas>
-    <div class="win-card">
-      <div class="win-emoji">🎉</div>
-      <h2>¡Lo lograron!</h2>
-      <div class="win-stats">
-        <div class="win-stat">
-          <span class="win-stat-val" id="win-time">--:--</span>
-          <span class="win-stat-label">Tiempo</span>
-        </div>
-        <div class="win-stat-divider"></div>
-        <div class="win-stat">
-          <span class="win-stat-val" id="win-errors">0</span>
-          <span class="win-stat-label">Errores</span>
-        </div>
-      </div>
-      <button onclick="localStorage.removeItem('sudokuX_savedGame'); sessionStorage.clear(); window.location.href='/'">
-        Jugar de nuevo
+    <!-- ══ TABLERO ══ -->
+    <div id="board" class="board"></div>
+
+    <!-- ══ TOOLBAR ══ -->
+    <div class="toolbar">
+      <button class="tool-btn" id="btn-undo">
+        <span class="tool-icon">↩</span>
+        <span class="tool-label">Deshacer</span>
+      </button>
+      <button class="tool-btn" id="btn-erase">
+        <span class="tool-icon">⌫</span>
+        <span class="tool-label">Borrar</span>
+      </button>
+      <button class="tool-btn" id="btn-note">
+        <span class="tool-icon">✏️</span>
+        <span class="tool-label">Lápiz</span>
       </button>
     </div>
+
+    <!-- ══ NUMPAD ══ -->
+    <div class="numpad">
+      <button class="num-btn" data-num="1"><span class="num-val">1</span><span class="num-count"></span></button>
+      <button class="num-btn" data-num="2"><span class="num-val">2</span><span class="num-count"></span></button>
+      <button class="num-btn" data-num="3"><span class="num-val">3</span><span class="num-count"></span></button>
+      <button class="num-btn" data-num="4"><span class="num-val">4</span><span class="num-count"></span></button>
+      <button class="num-btn" data-num="5"><span class="num-val">5</span><span class="num-count"></span></button>
+      <button class="num-btn" data-num="6"><span class="num-val">6</span><span class="num-count"></span></button>
+      <button class="num-btn" data-num="7"><span class="num-val">7</span><span class="num-count"></span></button>
+      <button class="num-btn" data-num="8"><span class="num-val">8</span><span class="num-count"></span></button>
+      <button class="num-btn" data-num="9"><span class="num-val">9</span><span class="num-count"></span></button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ TOAST (silencioso — sin texto) ══ -->
+<div id="save-toast" class="save-toast hidden" style="display:none!important"></div>
+
+<!-- ══ SHEET: COMPARTIR ══ -->
+<div id="share-overlay" class="sheet-overlay hidden"></div>
+<div id="share-sheet" class="bottom-sheet hidden">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Invitar a jugar</div>
+  <div class="share-code-big" id="share-code-big">----</div>
+  <p class="share-hint">Compartí el código o el link directo.<br>Tu compañero entra a inicio → Unirse → ingresa el código.</p>
+  <div class="share-actions" style="margin-top:8px;">
+    <button id="share-whatsapp" class="share-btn-wa">💬 Compartir por WhatsApp</button>
+    <button id="share-copy" class="share-btn-copy">📋 Copiar link</button>
+  </div>
+  <button class="sheet-close-btn" id="share-close">Cerrar</button>
+</div>
+
+<!-- ══ SHEET: AJUSTES ══ -->
+<div id="settings-overlay" class="sheet-overlay hidden"></div>
+<div id="settings-sheet" class="bottom-sheet hidden">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">⚙️ Ajustes</div>
+
+  <div class="settings-list">
+
+    <!-- Sonido -->
+    <div class="settings-row">
+      <span class="settings-label">🔊 Sonido</span>
+      <button class="toggle-btn active" id="sound-toggle">ON</button>
+    </div>
+
+    <!-- Tema -->
+    <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:12px; border-bottom:none;">
+      <span class="settings-label">🎨 Tema</span>
+      <div class="settings-theme-pills">
+        <button class="theme-pill active" data-theme="light" title="Claro">☀️</button>
+        <button class="theme-pill" data-theme="dark" title="Oscuro">🌙</button>
+        <button class="theme-pill" data-theme="ocean" title="Océano">🌊</button>
+      </div>
+    </div>
+
   </div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="sounds.js"></script>
-  <script src="client.js"></script>
+  <button class="sheet-close-btn" id="settings-close">Cerrar</button>
+</div>
+
+<!-- ══ WIN SCREEN ══ -->
+<div id="win-screen" class="win-screen hidden">
+  <canvas id="confetti-canvas"></canvas>
+  <div class="win-card">
+    <div class="win-emoji">🎉</div>
+    <h2 id="win-title">¡Lo lograste!</h2>
+    <div class="win-stats">
+      <div class="win-stat">
+        <span class="win-stat-val" id="win-time">--:--</span>
+        <span class="win-stat-label">Tiempo</span>
+      </div>
+      <div class="win-stat-divider"></div>
+      <div class="win-stat">
+        <span class="win-stat-val" id="win-errors">0</span>
+        <span class="win-stat-label">Errores</span>
+      </div>
+    </div>
+    <button onclick="localStorage.removeItem('sudokuX_savedGame'); sessionStorage.clear(); window.location.href='/'">
+      Jugar de nuevo
+    </button>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="sounds.js"></script>
+<script src="client.js"></script>
 </body>
 </html>
